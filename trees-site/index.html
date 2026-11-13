@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Majority on trees</title>
+<meta name="description" content="Interactive views of the gadgets that reduce monotone circuits to synchronous majority dynamics on trees of maximum degree 5, with a circuit compiler.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v7M12 12l-6 6M12 12l6 6M12 12v7' stroke='%23424e5d' stroke-width='2'/%3E%3Ccircle cx='12' cy='5' r='3' fill='%230088a5'/%3E%3Ccircle cx='6' cy='18' r='2.4' fill='%23424e5d'/%3E%3Ccircle cx='12' cy='19' r='2.4' fill='%230088a5'/%3E%3Ccircle cx='18' cy='18' r='2.4' fill='%23424e5d'/%3E%3C/svg%3E">
+<script>
+  // Apply a stored theme before the first paint (falls back to the system theme).
+  try { var t = localStorage.getItem("mt-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+<script>
+  // Site configuration: fill in the links when they are available.
+  window.SITE_CONFIG = {
+    notesUrl: "",   // e.g. a link to the notes or a preprint
+    codeUrl: "",    // e.g. https://codefloe.com/<user>/<repository>
+    siteUrl: ""     // public address of this site, used by embedded figures
+  };
+</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 5v7M12 12l-6 6M12 12l6 6M12 12v7" stroke="var(--cell-support)" stroke-width="2" fill="none"/>
+        <circle cx="12" cy="5" r="3" fill="var(--cell-signal)"/>
+        <circle cx="6" cy="18" r="2.4" fill="var(--cell-support)"/>
+        <circle cx="12" cy="19" r="2.4" fill="var(--cell-signal)"/>
+        <circle cx="18" cy="18" r="2.4" fill="var(--cell-support)"/>
+      </svg>
+      <span>Majority on trees</span>
+    </div>
+    <nav class="top-links" aria-label="Links">
+      <a href="#explorer" data-tab-link="gadgets">Gadgets</a>
+      <a href="#circuit" data-tab-link="circuit">Circuit compiler</a>
+      <a href="#reproducibility">Reproducibility</a>
+      <a id="link-notes" href="#" target="_blank" rel="noopener" hidden>Notes</a>
+      <a id="link-code" href="#" target="_blank" rel="noopener" hidden>Code</a>
+      <button id="theme-toggle" class="icon-btn" type="button">Dark mode</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="kicker">Interactive companion</p>
+      <h1 id="hero-title">Gadgets for majority dynamics on trees</h1>
+      <p class="lead">Step through the pieces of a reduction from monotone circuits to synchronous majority on
+        trees whose vertices have degree 1, 3 or 5. Every frame below is an exact state of the dynamics. The
+        circuit compiler turns any Boolean circuit into the macrocells, the program and the clocks of the
+        reduction, and runs it.</p>
+      <p class="paper-ref">Result: predicting synchronous majority is P-complete on trees of maximum degree 5.
+        The proof is analytic and comes from the project's research notes (October 2026), with internal review;
+        this site re-implements the construction and checks it by direct simulation. It is not a peer-reviewed
+        publication.</p>
+    </section>
+
+    <section class="text-section" aria-labelledby="rule-title">
+      <h2 id="rule-title" class="visually-hidden">The rule and the code</h2>
+      <div class="rule-grid">
+        <article class="card">
+          <svg width="96" height="96" viewBox="0 0 24 24" role="img" aria-label="A vertex and its neighbours">
+            <path d="M12 12L4 5M12 12L20 5M12 12L4 19M12 12L20 19M12 12L12 3" stroke="var(--grid)" stroke-width="1.2"/>
+            <circle cx="12" cy="12" r="3.2" fill="var(--cell-signal)"/>
+            <circle cx="4" cy="5" r="2.2" fill="var(--cell-signal)"/>
+            <circle cx="20" cy="5" r="2.2" fill="var(--cell-signal)"/>
+            <circle cx="12" cy="3" r="2.2" fill="var(--cell-signal)"/>
+            <circle cx="4" cy="19" r="2.2" fill="var(--cell-empty)" stroke="var(--grid)" stroke-width=".8"/>
+            <circle cx="20" cy="19" r="2.2" fill="var(--cell-empty)" stroke="var(--grid)" stroke-width=".8"/>
+          </svg>
+          <h3>The rule</h3>
+          <p>Every vertex is in state 0 or 1 and all vertices update at once. A vertex takes the majority state of
+            its neighbours and keeps its own state on a tie. All degrees here are 1, 3 or 5, so there are no ties: a
+            leaf simply copies its neighbour one step later.</p>
+        </article>
+        <article class="card">
+          <svg width="96" height="96" viewBox="0 0 24 24" role="img" aria-label="A clock subtree attached by one edge">
+            <path d="M12 4v6M12 10L5 18M12 10l7 8M12 10v9" stroke="var(--grid)" stroke-width="1.2"/>
+            <rect x="9" y="1.5" width="6" height="5" rx="1.2" fill="var(--panel)" stroke="var(--port)" stroke-width="1"/>
+            <circle cx="12" cy="10" r="2.6" fill="var(--cell-signal)"/>
+            <circle cx="5" cy="18" r="2" fill="var(--cell-support)"/>
+            <circle cx="19" cy="18" r="2" fill="var(--cell-empty)" stroke="var(--grid)" stroke-width=".8"/>
+            <circle cx="12" cy="20" r="2" fill="var(--cell-signal)"/>
+          </svg>
+          <h3>Clocks are trees</h3>
+          <p>A word of bits is played by a private subtree, glued to its consumer by one edge. Three of the four
+            branches of every node always vote for the next bit, so the port follows its word whatever the consumer
+            does. Programs of such clocks move and combine bits stored in macrocells.</p>
+        </article>
+        <article class="card">
+          <h3>Reading the figures</h3>
+          <p>All vertices obey the same rule; colors only distinguish roles. Ports are outlined, and vertices
+            whose history is forced (the consumer, or the abstract controls of the compiler) are dashed.</p>
+          <ul class="legend">
+            <li><span class="swatch signal"></span>1</li>
+            <li><span class="swatch support"></span>1, constant support</li>
+            <li><span class="swatch empty"></span>0</li>
+            <li><span class="swatch port"></span>port</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <div class="view-tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" data-tab-btn="gadgets" aria-selected="true">Gadgets</button>
+      <button type="button" role="tab" data-tab-btn="circuit" aria-selected="false">Circuit compiler</button>
+    </div>
+
+    <section id="explorer" aria-labelledby="g-title">
+      <div class="explorer">
+        <nav class="card gadget-nav" aria-label="Gadgets">
+          <ul id="gadget-list" class="gadget-list"></ul>
+        </nav>
+        <article class="card viewer">
+          <div class="viewer-head">
+            <h2 id="g-title">Gadget</h2>
+            <span id="g-fn" class="fn"></span>
+          </div>
+          <div id="g-params" class="tv-params"></div>
+          <div id="stage" class="stage tv-stage">
+            <span id="time-badge" class="time-badge">t = 0</span>
+            <div id="tv-svg-wrap" class="tv-svg-wrap"></div>
+          </div>
+          <div id="g-strips" class="tv-strips"></div>
+          <div class="timeline">
+            <label class="visually-hidden" for="time-slider">Time</label>
+            <input id="time-slider" type="range" min="0" max="10" step="1" value="0">
+            <div id="ticks" class="ticks" aria-hidden="true"></div>
+          </div>
+          <div class="transport">
+            <button id="btn-first" type="button" aria-label="First frame" title="First frame (Home)">⏮</button>
+            <button id="btn-prev" type="button" aria-label="Previous step" title="Previous step (←)">◀</button>
+            <button id="btn-play" class="primary" type="button" aria-label="Play">Play</button>
+            <button id="btn-next" type="button" aria-label="Next step" title="Next step (→)">▶</button>
+            <button id="btn-last" type="button" aria-label="Last frame" title="Last frame (End)">⏭</button>
+            <span class="spacer"></span>
+            <label for="speed" class="note">Speed</label>
+            <select id="speed">
+              <option value="1">0.5×</option>
+              <option value="2" selected>1×</option>
+              <option value="4">2×</option>
+              <option value="8">4×</option>
+            </select>
+          </div>
+          <div class="info">
+            <div>
+              <p id="g-text"></p>
+              <p id="g-reading" class="note"></p>
+              <p class="hint">Keyboard: <kbd>←</kbd> <kbd>→</kbd> step, <kbd>Space</kbd> play/pause,
+                <kbd>Home</kbd>/<kbd>End</kbd> first/last frame.</p>
+            </div>
+            <table id="readout" class="readout"></table>
+          </div>
+          <div class="g-downloads">
+            <span class="note">This tree with its initial configuration:</span>
+            <button id="g-dl-json" type="button" class="ghost-btn">Tree (.json)</button>
+            <button id="g-dl-edges" type="button" class="ghost-btn">Edge list (.txt)</button>
+          </div>
+          <p id="embed-credit" class="embed-credit"></p>
+          <p id="live" class="visually-hidden" aria-live="polite"></p>
+        </article>
+      </div>
+    </section>
+
+    <section id="circuit" aria-labelledby="cx-title" hidden>
+      <article class="card cx-card">
+        <div class="cx-head">
+          <div>
+            <h2 id="cx-title">Circuit compiler</h2>
+            <p class="note cx-intro">Describe a Boolean circuit by its adjacency matrix, or as a list of gates. The
+              compiler builds the tree of the degree-5 reduction: one macrocell per register of a bus, a serial
+              program that reads, combines and writes every gate, and the clocks that play the program.</p>
+          </div>
+          <select id="cx-example" aria-label="Load an example"></select>
+        </div>
+        <div class="segmented" role="group" aria-label="Input format">
+          <button type="button" data-cmode="matrix" aria-pressed="true">Adjacency matrix</button>
+          <button type="button" data-cmode="list" aria-pressed="false">Gate list</button>
+        </div>
+        <div id="cx-matrix-pane" class="cx-editor">
+          <div>
+            <h3>Nodes</h3>
+            <div class="cx-scroll"><table id="cx-nodes" class="cx-table"></table></div>
+            <div class="cx-row-btns">
+              <button id="cx-add-input" type="button" class="ghost-btn">+ Input</button>
+              <button id="cx-add-gate" type="button" class="ghost-btn">+ Gate</button>
+              <label class="cx-output-label">Output <select id="cx-output"></select></label>
+            </div>
+          </div>
+          <div>
+            <h3>Adjacency matrix <span class="note">(a checked cell means: row feeds column)</span></h3>
+            <div class="cx-scroll"><table id="cx-matrix" class="cx-matrix"></table></div>
+            <details class="cx-paste">
+              <summary>Paste a 0/1 matrix</summary>
+              <textarea id="cx-paste" rows="6" spellcheck="false" placeholder="0 0 1&#10;0 0 1&#10;0 0 0"></textarea>
+              <button id="cx-paste-apply" type="button" class="ghost-btn">Apply matrix</button>
+              <p class="note">One row per line, entries separated by spaces or commas (JSON also works). If the size
+                changes, columns without incoming edges become inputs and the others gates; then choose each gate
+                type.</p>
+            </details>
+          </div>
+        </div>
+        <div id="cx-list-pane" hidden>
+          <textarea id="cx-list" class="cx-list" rows="10" spellcheck="false" aria-label="Gate list"></textarea>
+          <p class="note">Syntax: <code>inputs: a=1, b=0, c</code>, then one gate per line such as
+            <code>g = AND(a, b)</code> or <code>m = OR(g, c, a)</code>, and finally <code>output: m</code>.
+            Types: AND, OR, NOT, NAND, NOR, XOR, XNOR. Gates with more than two inputs are split into binary
+            gates.</p>
+        </div>
+        <p id="cx-error" class="cx-error" role="alert" hidden></p>
+        <div class="cx-build-row">
+          <button id="cx-build" type="button" class="primary-btn">Build the tree</button>
+          <label class="cx-chip"><input id="cx-ever" type="checkbox" checked> EVER receiver</label>
+          <span id="cx-progress-label" class="note" hidden></span>
+          <button id="cx-share-btn" type="button" class="ghost-btn">Link to this circuit</button>
+          <input id="cx-share" class="cx-share" readonly hidden aria-label="Link to this circuit">
+        </div>
+      </article>
+
+      <div id="cx-results" hidden>
+        <article class="card cx-card">
+          <div id="cx-stats" class="cx-stats"></div>
+          <div class="cx-inputs-row">
+            <h3>Inputs</h3>
+            <div id="cx-assign" class="cx-assign"></div>
+            <button id="cx-check-all" type="button" class="ghost-btn">Check all assignments</button>
+          </div>
+          <p id="cx-verdict" class="cx-verdict" aria-live="polite"></p>
+          <table id="cx-truth" class="readout cx-truth"></table>
+        </article>
+        <article class="card cx-card">
+          <h3>Macrocells</h3>
+          <p class="note">Each register of the bus is a macrocell A–C–B with two leaves; each of A, C, B has one
+            external port and two controls. Lines between macrocells are the physical port edges; a small dot is a
+            constant-0 cherry on an unused port. The numbers above a vertex are its controls in 1 (0: AND, 1: hold
+            by majority, 2: OR of its three other neighbours). Select a macrocell to see its control words.</p>
+          <div id="cx-stage" class="stage tv-stage cx-tree-stage"><div id="cx-svg-wrap" class="tv-svg-wrap"></div></div>
+          <div class="cx-controls">
+            <label class="visually-hidden" for="cx-time">Time</label>
+            <button id="cx-step-back" type="button" class="ghost-btn" aria-label="One step back">−1</button>
+            <button id="cx-play" type="button" class="primary-btn">Play</button>
+            <button id="cx-step" type="button" class="ghost-btn" aria-label="One step forward">+1</button>
+            <label class="note" for="cx-play-speed">steps per frame</label>
+            <select id="cx-play-speed" class="cx-speed">
+              <option value="1" selected>1</option>
+              <option value="4">4</option>
+              <option value="16">16</option>
+              <option value="64">64</option>
+            </select>
+            <input id="cx-time" type="range" min="0" max="10" step="1" value="0">
+            <span id="cx-time-label" class="note"></span>
+          </div>
+          <div class="cx-controls">
+            <button id="cx-prev-ins" type="button" class="ghost-btn">◀ Instruction</button>
+            <button id="cx-next-ins" type="button" class="ghost-btn">Instruction ▶</button>
+            <button id="cx-next-gate" type="button" class="ghost-btn">Next gate ▶</button>
+            <button id="cx-jump-start" type="button" class="ghost-btn">Program start</button>
+            <button id="cx-jump-output" type="button" class="ghost-btn">Output at T</button>
+            <button id="cx-jump-ever" type="button" class="ghost-btn">z at T + 2</button>
+          </div>
+          <p id="cx-instruction" class="cx-instruction"></p>
+          <div id="cx-inspect" class="cx-inspect"></div>
+          <h3>Program</h3>
+          <div id="cx-program" class="cx-program"></div>
+          <div class="cx-download-block">
+          <h3>Download</h3>
+          <div class="cx-downloads">
+            <button id="cx-dl-plan" type="button" class="ghost-btn">Plan (.json)</button>
+            <button id="cx-dl-macro" type="button" class="ghost-btn">Macrocell tree (.json)</button>
+            <button id="cx-dl-svg" type="button" class="ghost-btn">View (.svg)</button>
+          </div>
+          <p class="note">The plan holds the macrocells, their ports, the program and every control word, with
+            H, S and T. The macrocell tree is the exact tree the page simulates: macrocells, leaves and constants,
+            with each control given by its word. The full tree replaces every control by its generator; it has the
+            size shown above, usually far too large for a browser. The Full tree view below unfolds any part of it,
+            and <code>tools/expand_tree.py</code> writes all of it from the plan.</p>
+          </div>
+        </article>
+        <article id="cx-full" class="card cx-card">
+          <h3>Full tree</h3>
+          <p class="note">Every vertex of the tree, without the macrocell summary: macrocells, leaves, constants and all
+            the clocks. Start at any vertex of a macrocell. A box is the whole subtree behind one edge, with its number of
+            vertices; its color is the state of its first vertex. Select a box to unfold it one level, and an unfolded
+            vertex to fold it again. Unfolded clock vertices are simulated with the majority rule. A folded subtree only
+            touches the rest through one edge, so it is replaced exactly by the proven history of its first vertex.</p>
+          <div class="cx-controls">
+            <label class="note" for="cx-full-root">Start at</label>
+            <select id="cx-full-root" class="cx-speed"></select>
+            <button id="cx-full-expand" type="button" class="ghost-btn">Unfold everything</button>
+            <button id="cx-full-collapse" type="button" class="ghost-btn">Fold everything</button>
+          </div>
+          <div class="cx-controls">
+            <button id="cx-full-back" type="button" class="ghost-btn" aria-label="One step back">−1</button>
+            <button id="cx-full-fwd" type="button" class="ghost-btn" aria-label="One step forward">+1</button>
+            <label class="visually-hidden" for="cx-full-time">Time</label>
+            <input id="cx-full-time" type="range" min="0" max="10" step="1" value="0">
+            <span id="cx-full-tlabel" class="note"></span>
+          </div>
+          <p id="cx-full-info" class="cx-instruction"></p>
+          <div id="cx-full-stage" class="stage tv-stage cx-tree-stage"><div id="cx-full-wrap" class="tv-svg-wrap"></div></div>
+        </article>
+      </div>
+
+      <article class="card cx-card cx-howto">
+        <h3>How the compiler works</h3>
+        <p>The circuit is first rewritten with AND and OR gates only: negations are pushed to the inputs, and XOR
+          and XNOR are expanded. The inputs, with their values, become constant nodes 1, …, and the gates follow in
+          order, each computed from two earlier nodes. With M nodes in all, the tree has 3M + 5 macrocells:</p>
+        <ul>
+          <li>a bus g – b<sub>1</sub> – … – b<sub>M</sub>, and for every node i an arm b<sub>i</sub> – c<sub>i</sub> –
+            r<sub>i</sub>: the register r<sub>i</sub> keeps the value of node i behind its connector c<sub>i</sub>;</li>
+          <li>two working arms g – c<sub>A</sub> – r<sub>A</sub> and g – c<sub>B</sub> – r<sub>B</sub> for the
+            operands.</li>
+        </ul>
+        <p>A macrocell is a path A – C – B with a leaf on each end. Each of its three main vertices has one external
+          port, two controls and two memory neighbours: degree 5. With u of its controls in 1, a main vertex computes
+          the AND (u = 0), the majority (u = 1) or the OR (u = 2) of its other three neighbours. Hence:</p>
+        <ul>
+          <li>HOLD (u = 1 everywhere): a stored bit is kept whatever the ports do;</li>
+          <li>RESET (u = 0 for 4 steps): the macrocell is cleared, given one port that stays 0;</li>
+          <li>LOAD (u = 2 for 4 steps): from 0, it loads the OR of its ports; COPY is RESET then LOAD (8 steps).</li>
+        </ul>
+        <p>For every gate the program reads its two operands through the bus without erasing them, computes the AND or
+          the OR in macrocell g in 27 steps, writes the result into its register and cleans up: 12(p + q + i) + 147
+          steps for gate i with operands p and q. The program is played by the controls: each control has a word,
+          and a private degree-5 generator plays that word, robustly, after a common delay S. With H = 200M² + 200,
+          S = ⌈log₂(H + 2)⌉ + 8 and T = S + H, the output register holds the value of the circuit from the end of the
+          program on; it is read at T. The optional EVER receiver z becomes 1 at T + 2 if and only if the output is 1,
+          and is 0 before.</p>
+        <p>The page simulates the macrocells exactly, with every control following its word. The generators that
+          produce those words are shown in the Gadgets tab, and they were checked separately against arbitrary
+          consumers; complete trees with real generators were also simulated for small circuits (see
+          Reproducibility).</p>
+      </article>
+    </section>
+
+    <section class="text-section" aria-labelledby="how-title">
+      <h2 id="how-title">How the pieces fit</h2>
+      <div class="two-col">
+        <article class="card">
+          <h3>Clocks</h3>
+          <p>Constants are cherries; a timer is two identical arms that OR a wave towards the port; a pulse is a chain
+            in which three of four children always agree with the next bit. A word with K changes is split among
+            four branches by a rotating dissident, so that each branch inherits about half of the changes, until
+            only pulses, timers and constants remain. Every clock has degree at most 5 and is robust to its
+            consumer.</p>
+        </article>
+        <article class="card">
+          <h3>Memory and program</h3>
+          <p>Macrocells keep, clear, copy and combine bits according to how many of their controls are 1. A bus with
+            registers on arms of length two evaluates any monotone circuit gate by gate, re-reading registers to
+            serve any fan-out. The whole tree has polynomial size and the answer is ready at a polynomial time.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="reproducibility" class="text-section prose" aria-labelledby="repro-title">
+      <h2 id="repro-title">Reproducibility</h2>
+      <p>The page computes everything from <code>assets/tree-model.js</code>. It follows the construction of the
+        research notes on maximum degree 5, which were re-implemented independently in Python and checked by a
+        direct simulation of the majority rule:</p>
+      <ul>
+        <li>pulses, generators of every word with up to 10 bits and long sampled words, against adversarial
+          consumers;</li>
+        <li>the macrocell modes against arbitrary ports, and the whole program for every circuit with up to four
+          nodes and random circuits with up to twelve, with every input assignment and the EVER receiver;</li>
+        <li>complete trees with real generators for small circuits, compared vertex by vertex with the macrocell
+          level.</li>
+      </ul>
+      <p>The site's own test compares this page's model with that Python implementation:</p>
+<pre><code>node tools/test_model.cjs                # the page's model against the Python reference
+python3 -B tools/expand_tree.py plan.json # the full tree of a downloaded plan, as an edge list
+python3 -B tools/build_standalone.py      # single-file version in dist/</code></pre>
+      <h2 id="embed-title">Embed a gadget</h2>
+      <p>Any gadget can be shown alone with <code>?embed=&lt;gadget&gt;</code>, for example
+        <code>?embed=pulse</code>. Optional parameter: <code>autoplay=1</code>.</p>
+      <p class="note">Gadget names: constant, timer, pulse, dissident, generator, macrocell, gate.</p>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Majority on trees · interactive companion to the project's research notes.</p>
+    <p>Static site without external resources; it works offline and from any folder.</p>
+  </div>
+</footer>
+
+<script src="assets/tree-model.js"></script>
+<script src="assets/circuit-input.js"></script>
+<script src="assets/tree-draw.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/compiler.js"></script>
+</body>
+</html>
