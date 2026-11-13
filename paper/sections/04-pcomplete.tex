@@ -1,0 +1,52 @@
+% ====================================================================
+\section{P-completeness of program evaluation}\label{sec:pcomplete}
+% ====================================================================
+
+\begin{definition}\label{def:eval}
+$\EVAL$ is the problem of deciding, for a given MSLP $\mathcal P$, whether $\val(\mathcal P)=1$.
+$\OMCVP$ (topologically ordered monotone circuit value) is the restriction of $\EVAL$ to programs
+in normal form.
+\end{definition}
+
+The following theorem is classical.
+
+\begin{theorem}[Ladner; Goldschlager]\label{thm:mcvp}
+$\OMCVP$ is $\Ptime$-complete under logspace many-one reductions.
+\end{theorem}
+
+\begin{proof}[Sources]
+Ladner~\cite{Lad75} proved $\Ptime$-completeness of the circuit value problem. In his encoding a
+circuit is a straight-line sequence of assignments, each referring only to earlier entries.
+Goldschlager~\cite{Gol77} showed that the restriction to monotone circuits (constants, $\AND$, $\OR$)
+remains $\Ptime$-complete under logspace reductions. His double-rail transformation replaces each
+gate by a constant number of monotone gates that refer only to the images of earlier gates, so it
+preserves the topologically ordered presentation. Appending the gate $\AND(o,o)$ preserves the
+answer and is a logspace operation. For a uniform treatment of these variants see
+\cite[Appendix~A.1]{GHR95}. The source notes of the original manuscript use the same ordered
+convention~\cite{Src}.
+\end{proof}
+
+\begin{corollary}\label{cor:evalcomplete}
+$\EVAL$ is $\Ptime$-complete under logspace many-one reductions.
+\end{corollary}
+
+\begin{proof}
+Membership: evaluate the instructions in order, which takes $O(L)$ operations on a table of $r$
+bits. Hardness: $\OMCVP$ is the special case of programs in normal form.
+\end{proof}
+
+\begin{remark}[Two different space bounds]\label{rem:twospaces}
+Two space bounds play different roles in the rest of the paper, and they must not be confused.
+\begin{itemize}
+\item The \emph{reduction} of \cref{thm:simulation} runs in logarithmic space. It reads the program
+  text and writes the tree. It never evaluates the program and never stores register values.
+  Everything it outputs is determined by the instruction types and operand indices: vertices,
+  edges, initial bits, control words, and the query time.
+\item \emph{Evaluating} the program is $\Ptime$-complete by \cref{cor:evalcomplete}. It is not
+  known to be possible in logarithmic space, which would imply $\Lsp=\Ptime$. In the constructed
+  tree, the evaluation is carried out by the majority dynamics itself, during the physical time
+  interval $[0,\tau]$.
+\end{itemize}
+Obliviousness (\cref{sec:model}) is what separates the two. The schedule is a function of the
+program text only, so the transducer can write it without knowing any computed bit.
+\end{remark}

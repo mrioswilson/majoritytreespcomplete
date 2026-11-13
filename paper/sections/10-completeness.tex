@@ -1,0 +1,178 @@
+% ====================================================================
+\section{Completeness results}\label{sec:completeness}
+% ====================================================================
+
+\subsection{Membership in P, including binary-encoded times}\label{sec:membership}
+
+The following is the classical bounded-transient argument for symmetric majority networks
+\cite{GO80,PS83,GFP85}. We include the proof because we need the explicit transient bound for
+binary-encoded times, in the exact model of \cref{def:majority}. It applies to every explicit
+instance, not only to the constructed trees.
+
+\begin{proposition}[Membership]\label{prop:membership}
+Let $T$ be a finite simple undirected graph with $n$ vertices, and let $W=2|E|+n$. For every initial
+configuration, $x(t+2)=x(t)$ for all $t\ge W$. Consequently, $\Pred$ and $\Ever$ are in $\Ptime$, even
+when $\tau$ is a large binary integer.
+\end{proposition}
+
+\begin{proof}
+Use spins $s_v=2x_v-1\in\{-1,1\}$. Put $w_{vu}=w_{uv}=1$ for each edge, $w_{vv}=1$ when $\deg(v)$ is
+even (including degree zero), and all other weights $0$. No physical self-loop is added; the diagonal
+is used only for the analysis. Every row sum $\sum_u w_{vu}$ is odd, and
+\begin{equation}\label{eq:sign}
+s_v(t+1)=\operatorname{sign}\Bigl(\sum_u w_{vu}s_u(t)\Bigr),
+\end{equation}
+because at even degree the diagonal term breaks exactly the ties, and at odd degree there are no
+ties. Define
+\[
+\Phi(t)=\sum_{v,u}w_{vu}\,s_v(t+1)\,s_u(t),\qquad |\Phi(t)|\le\sum_{v,u}w_{vu}=W.
+\]
+By the symmetry of $w$,
+\begin{equation}\label{eq:energy}
+\Phi(t+1)-\Phi(t)=\sum_v\bigl(s_v(t+2)-s_v(t)\bigr)\sum_u w_{vu}s_u(t+1).
+\end{equation}
+The inner sum is an odd integer with sign $s_v(t+2)$ by \eqref{eq:sign}. So each term is $0$ if
+$s_v(t+2)=s_v(t)$ and at least $2$ otherwise. Let $t^\ast$ be the first $t$ with $x(t+2)=x(t)$. By
+determinism, $x(t+2)=x(t)$ for all $t\ge t^\ast$, and for $t<t^\ast$, $\Phi$ increases by at least $2$
+at each step. Since $\Phi$ takes values in $[-W,W]$, we get $2t^\ast\le 2W$.
+
+Algorithm for $\Pred$: simulate up to time $W+1$, which is at most $3n$ for a tree. If $\tau\le W+1$, answer $x_{v^\ast}(\tau)$;
+otherwise answer $x_{v^\ast}(W+((\tau-W)\bmod 2))$, using only the parity of $\tau$. Algorithm for
+$\Ever$: the states after $W$ repeat with period dividing two, so $z$ is ever $1$ if and only if
+$x_z(t)=1$ for some $1\le t\le W+1$. Both run in time polynomial in the explicit input length.
+\end{proof}
+
+\subsection{Prediction}
+
+\begin{proof}[Proof of \cref{thmB}]
+Membership: \cref{prop:membership}. Hardness: given an instance of $\OMCVP$, which is
+$\Ptime$-complete by \cref{thm:mcvp}, \cref{thm:simulation} produces in logspace an instance
+$(T,x(0),v^\ast,\tau)$ of $\Pred$ with degrees in $\{1,3,4\}$, polynomial $\tau$, and
+$x_{v^\ast}(\tau)=1$ if and only if the circuit outputs $1$. Composition of logspace reductions
+\cite{Jon75,LL76} completes the proof.
+\end{proof}
+
+\subsection{Eventual activation}\label{sec:ever}
+
+The clock theorem implements the processor controls only up to a finite horizon. After $\Hz$ the
+generators alternate, and the processor may behave arbitrarily (\cref{rem:afterH}). Prediction at the
+single time $\tau$ is unaffected, but eventual activation is not: a false instance must never
+activate the designated vertex, even after $\Hz$. We need a reader that rejects in the false case
+whatever happens outside its window.
+
+\begin{lemma}[Finite-window reader]\label{lem:reader}
+Let $q$ be a vertex with an arbitrary history, except that $x_q(T_0)=x_q(T_0+1)=d$. Attach a new
+vertex $z$ adjacent to $q$, to a private leaf $\ell$, and to the roots of two private copies of
+$P_{T_0,T_0+2}$ (\cref{lem:pulses}). Initialise $z=\ell=0$. Then $z$ has degree four, $\ell$ has
+degree one, the pulses use degrees $1$ and $3$, and the edge $qz$ counts towards the degree of $q$.
+Moreover:
+\begin{enumerate}[label=(\alph*)]
+\item $x_z(t)=0$ for all $t\le T_0$, whatever the history of $q$;
+\item $x_z(t)=1$ for some $t$ if and only if $d=1$, in which case $x_z(T_0+1)=1$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+The pulses are robust and their consumer is $z$, so both are $1$ exactly at times $T_0$ and $T_0+1$,
+and $0$ at all other times, \emph{including all times after $T_0+1$}: their tail is exactly zero for
+every $t\ge T_0+2$. Before $T_0$, if $z=\ell=0$ then only $q$ can vote one at $z$, so $z$ stays $0$,
+and the leaf copies $z$. Hence $z=\ell=0$ up to time $T_0$. At control time $T_0$,
+$x_z(T_0+1)=\MAJ_5(0,d,0,1,1)=d$ and $x_\ell(T_0+1)=0$. At $T_0+1$,
+$x_z(T_0+2)=\MAJ_5(d,d,0,1,1)=d$ and $x_\ell(T_0+2)=d$. From control time $T_0+2$ on, both pulses
+are $0$. If $d=0$, the invariant $z=\ell=0$ is restored at $T_0+2$ and persists for every later
+history of $q$, since only $q$ can vote one. If $d=1$, the witness $x_z(T_0+1)=1$ has occurred;
+retaining $1$ forever is not needed.
+\end{proof}
+
+The reader does not require the input to start at zero, nor that it was never $1$ earlier. Nor does
+it require the phase-defect clocks to keep \HOLD\ forever.
+
+\begin{construction}[The activation tree]\label{con:ever}
+Let $\mathcal P$ be in normal form; its last instruction is $R_m\leftarrow R_o\wedge R_o$, of
+background $0$. Modify \cref{con:tree} as follows.
+\begin{enumerate}[label=(\arabic*)]
+\item \emph{Reader at the far port.} Remove the far clock $\kappa_m$, and attach the reader vertex $z$
+  of \cref{lem:reader} to $q=\ep{R_m}{\kappa_m}$, in the same data port. This adds no edge at the
+  register endpoint, which still has degree four.
+\item \emph{Final instruction.} In $\Sigma_m$, omit $\prim{SET}(R_m\mathbin{:=}b)$ from
+  \prim{PREPARE}, so that $R_m$ stays $00$ and only $C_m=K_m=00$ are prepared. Replace phases 11
+  and 12 by the \emph{final write}:
+  \begin{align*}
+  &\prim{ROUTE}(r_m;E_{m-1}\to C_m;E_m) &&\text{during }[s,s+6),\\
+  &\prim{MOVE}_0(C_m\to K_m) &&\text{during }[s+6,s+9),\\
+  &\prim{MOVE}_0(K_m\to R_m) &&\text{during }[s+9,s+12),
+  \end{align*}
+  starting at the end $s$ of phase 10, which is empty since $k=m$. Let $\tau_E=s+12$, and keep the
+  rest schedule of background $0$ afterwards.
+\item \emph{Window.} Use $T_0=\tau_E$ in the reader, and the horizon $\Hz=\tau_E+3$ for all
+  generators.
+\end{enumerate}
+The designated vertex is $z$, with $x_z(0)=0$.
+\end{construction}
+
+\begin{lemma}[Final write]\label{lem:finalwrite}
+In the activation tree, the processor vertices follow the forced evolution of the modified schedule
+up to time $\Hz+1$. At times $\tau_E$ and $\tau_E+1$, $R_m=dd$ with $d=\val(\mathcal P)$. All blocks
+and control events of the modified schedule are admissible.
+\end{lemma}
+
+\begin{proof}
+\emph{Before the final instruction.} The port of $\ep{R_m}{\kappa_m}$ now carries $x_z$ instead of a
+far clock. By \cref{lem:reader}(a), $x_z(t)=0$ for $t\le\tau_E$, for every history of $R_m$. The cell
+$R_m$ is in \HOLD\ and uniform $00$ from time $0$ until the last move. It is never read, because every
+operand index is smaller than $m$. It is not prepared, and normalisation leaves registers in \HOLD.
+So the content of its far port is never used before the final write, and
+\cref{lem:prepare,lem:fetch,lem:normalize,prop:instruction} hold verbatim for all instructions
+$k<m$. Within $\Sigma_m$, phases 1 to 10 are as before, except that $R_m=00$ instead of $bb$; these
+phases never involve $R_m$. No read enters the branch of $R_m$.
+
+\emph{Final write ($c=0$, $b=1$).} At $s$ we have $E_{m-1}=dd$, $E_m=11$ (the pilot), $C_m=K_m=00$,
+$R_m=00$ and $x_{r_m}=0$. The route has destination $C_m=00$, whose far port is $\ep{K_m}{C_m}=0$, and
+bias $E_m=11$. Its source's far port is $r_{m-1}$, whose arms are $E_{m-2}=0$, $C_{m-1}=1$ and
+$E_{m-1}$, so it stays $0$. By \cref{lem:route}, $C_m=dd$ and $E_{m-1}=00$. Then
+$\prim{MOVE}_0(C_m\to K_m)$: the destination is $K_m=00$ with far port $\ep{R_m}{K_m}=0$, which gives
+$C_m=00$ and $K_m=dd$. Then $\prim{MOVE}_0(K_m\to R_m)$: the destination is $R_m=00$, and its far
+port is $x_z$, which is $0$ at control times $\tau_E-3,\tau_E-2,\tau_E-1\le\tau_E$. This gives
+$K_m=00$ and $R_m=dd$ at $\tau_E$. During these moves $r_m$ keeps $0$, because its self-vote, $h_m$
+and $E_{m-1}=0$ are $0$. Afterwards $R_m$ is in \HOLD\ and uniform, so it holds $dd$ at $\tau_E+1$,
+whatever $z$ does. Since this is the final write, neither restoring $C_m,K_m$ nor returning the whole
+processor to a normal configuration is needed.
+
+\emph{Admissibility.} The route at $r_m$ has reference parity $c=0$, and phase 10 ends at parity $0$
+(\cref{lem:sigmatiming}). $\prim{MOVE}_0(C_m\to K_m)$ is the event $(0,0,6)$, and
+$\prim{MOVE}_0(K_m\to R_m)$ is $(1,0,9)$. Both give $0$ by \eqref{eq:startparity}. The omitted
+$\prim{SET}(R_m\mathbin{:=}b)$ only removes a block. The conclusions of \cref{thm:forced}\ref{forced:phase}
+and of \cref{prop:correct} therefore hold for the modified schedule, with $\Hz=\tau_E+3$.
+\end{proof}
+
+\begin{proof}[Proof of \cref{thmC} and of the activation part of \cref{thm:simulation}]
+\emph{Topology and size.} The activation tree is obtained from a tree with the far clock $\kappa_m$
+removed by attaching the reader through the single edge $qz$. The reader is itself a tree, with
+$z$ of degree four, $\ell$ of degree one, and pulses with degrees $1$ and $3$. So it is a tree with
+degrees in $\{1,3,4\}$. The two pulses have size $O((\tau_E+3)^2)$.
+
+\emph{Correctness.} By \cref{lem:finalwrite}, $x_q(\tau_E)=x_q(\tau_E+1)=d=\val(\mathcal P)$ in the
+closed tree. By \cref{lem:reader}, $z$ is ever $1$ if and only if $d=1$. If the program outputs $0$,
+then $z$ stays $0$ forever, even though the phase-defect clocks alternate after $\Hz$ and may change
+the processor arbitrarily.
+
+\emph{Uniformity.} The reader and its pulses are emitted in logspace (\cref{lem:genlogspace}, or
+directly from the explicit description of \cref{lem:pulses}), and the modified schedule is
+interpreted as in \cref{prop:logspace}.
+
+\emph{Completeness.} Membership is \cref{prop:membership}, and hardness follows from \cref{thm:mcvp}
+as in the proof of \cref{thmB}.
+\end{proof}
+
+\subsection{Scope}
+
+\begin{remark}\label{rem:scope}
+\begin{itemize}
+\item The construction proves hardness already at treewidth one.
+\item It does not show that four is the smallest possible maximum degree. The classification at
+  maximum degree three remains unresolved in the source notes.
+\item The construction of degree five with only odd degrees is a separate, earlier result.
+\item Nothing here separates $\Ptime$ from $\NC$, and no claim of bibliographic priority or
+  external validation is made.
+\end{itemize}
+\end{remark}

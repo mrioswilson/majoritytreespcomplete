@@ -1,0 +1,68 @@
+% ====================================================================
+\section{Preliminaries on majority dynamics}\label{sec:prelim}
+% ====================================================================
+
+\begin{definition}[Synchronous majority]\label{def:majority}
+Let $T=(V,E)$ be a finite simple undirected graph and $x(0)\in\{0,1\}^V$. For $t\ge 0$ and $v\in V$
+with neighbourhood $N(v)$, put $n_1=|\{u\in N(v):x_u(t)=1\}|$ and $n_0=|N(v)|-n_1$, and define
+\[
+x_v(t+1)=\begin{cases}1&\text{if } n_1>n_0,\\ 0&\text{if } n_1<n_0,\\ x_v(t)&\text{if } n_1=n_0.\end{cases}
+\]
+\end{definition}
+
+For $k$ odd, $\MAJ_k$ denotes the majority of $k$ bits. In this paper only degrees one to four occur.
+A vertex of degree one copies its neighbour, and a vertex of degree three takes $\MAJ_3$ of its
+neighbours, with no self-vote at odd degree. At degree four the rule is equivalent to
+\begin{equation}\label{eq:maj5}
+x_v(t+1)=\MAJ_5\bigl(x_v(t),x_{u_1}(t),x_{u_2}(t),x_{u_3}(t),x_{u_4}(t)\bigr),
+\end{equation}
+because a tie $2$--$2$ among the neighbours is broken by $x_v(t)$, and a $3$--$1$ or $4$--$0$ split
+is not affected by one extra vote. The old state is used \emph{only} to implement the tie rule. It is
+not an additional programmable neighbour. In particular, it is never a ``fifth physical
+neighbour''.
+
+\begin{lemma}[Self-duality]\label{lem:selfdual}
+If $x(\cdot)$ is a trajectory of synchronous majority on $T$, then so is its complement
+$\bar x(t)=\mathbf 1-x(t)$.
+\end{lemma}
+
+\begin{proof}
+Complementing all neighbours swaps $n_0$ and $n_1$. The tie rule is complemented together with the
+old state.
+\end{proof}
+
+We often analyse a set $U\subseteq V$ while treating the vertices outside $U$ as given signals.
+
+\begin{definition}[Open evolution]\label{def:open}
+Let $U\subseteq V$, and let $\partial U$ be the set of vertices outside $U$ that are adjacent to
+some vertex of $U$. Given initial bits on $U$ and a \emph{boundary history} $y:\partial U\times\mathbb N\to\{0,1\}$,
+the \emph{open evolution} of $U$ applies \cref{def:majority} to every $v\in U$, using $y_u(t)$ as the
+state of $u\in\partial U$ at time $t$.
+\end{definition}
+
+\begin{lemma}[Locality]\label{lem:locality}
+Let $x(\cdot)$ be a trajectory of the whole graph. For every $U\subseteq V$, the restriction of $x$
+to $U$ coincides with the open evolution of $U$ from $x(0)|_U$ under the boundary history
+$y_u(t)=x_u(t)$. Consequently, two trajectories that agree on $U$ at time $0$ and on $\partial U$ at
+all times $0\le t<t_1$ agree on $U$ at all times $0\le t\le t_1$.
+\end{lemma}
+
+\begin{proof}
+Both claims follow by induction on $t$, because the update of $v\in U$ at time $t$ reads only
+$x_v(t)$ and the states at time $t$ of the neighbours of $v$, which lie in $U\cup\partial U$.
+\end{proof}
+
+\Cref{lem:locality} is used constantly, often implicitly. In the following sections a typical
+statement is: ``for every history of the port $u$, the vertices of $U$ do the following''. Such a
+statement is a claim about the open evolution of $U$ for \emph{every} boundary history. By
+\cref{lem:locality} it applies to the actual history, whatever that turns out to be, including
+histories that depend on the past states of $U$ through feedback.
+
+\begin{definition}[Decision problems]\label{def:problems}
+An instance of $\Pred$ consists of an explicit tree $T$ of maximum degree at most four, listed by
+its vertices and edges, an initial configuration $x(0)$, a vertex $v^\ast$, and a nonnegative
+integer $\tau$ encoded in binary. The question is whether $x_{v^\ast}(\tau)=1$.
+
+An instance of $\Ever$ consists of such a tree and configuration, together with a vertex $z$ with
+$x_z(0)=0$. The question is whether $x_z(t)=1$ for some $t\ge 1$.
+\end{definition}

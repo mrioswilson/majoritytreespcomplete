@@ -1,0 +1,117 @@
+% ====================================================================
+\section{Reduction analysis}\label{sec:analysis}
+% ====================================================================
+
+Fix an MSLP $\mathcal P$ in normal form with $m$ registers, its program schedule
+$\Sigma(\mathcal P)$, its observation time $\tau$ (\cref{cor:tau}), and the horizon $\Hz=\tau+3$.
+Any polynomial $\Hz\ge\tau+3$ works equally well; the original manuscript uses
+$\Hz=10000(m+1)^2$.
+
+\begin{construction}[The output tree]\label{con:tree}
+For every control slot $\sigma$ of $P(m)$ (two per cell endpoint, one per junction, one per far
+clock), let $w_\sigma$ be its word under $\Sigma(\mathcal P)$ on $[0,\Hz]$ and $\beta_\sigma$ its
+phase (\cref{def:procphases}). Let $\Gamma_\sigma=\Gamma\bigl(D(w_\sigma,\beta_\sigma),\beta_\sigma\bigr)$
+(\cref{cor:words}), with private vertex names. The tree $T$ is obtained from $P(m)$ by identifying
+each slot with the root of its generator, as in \cref{prop:substitution}. Its initial configuration
+is $\NORMAL(0,\rho_0)$ on the processor vertices and the initial bits of the generators elsewhere. The
+designated vertex $v^\ast$ is the endpoint $\ep{R_m}{K_m}$, and the query time is $\tau$.
+\end{construction}
+
+\subsection{Correctness}
+
+\begin{proposition}[Correctness]\label{prop:correct}
+In the majority evolution of $T$, $x_{v^\ast}(\tau)=\val(\mathcal P)$. More precisely, the
+processor vertices of $T$ follow the forced evolution of \cref{thm:forced} at all times in
+$[0,\Hz+1]$.
+\end{proposition}
+
+\begin{proof}
+By \cref{thm:forced}\ref{forced:phase}, every $w_\sigma$ is $\beta_\sigma$-phased. By
+\cref{cor:words}, $\Gamma_\sigma$ is a robust generator whose root history agrees with $w_\sigma$ on
+$[0,\Hz]$. \Cref{prop:substitution}\ref{sub:same} shows that the processor vertices follow the forced
+evolution up to time $\Hz+1\ge\tau$, and \cref{thm:forced}\ref{forced:out} gives the value.
+\end{proof}
+
+We now spell out the three properties of the clock trees that the proof relies on.
+\begin{itemize}
+\item \emph{Autonomy.} Each generator is a private subtree, joined to the processor by one edge, and
+  robust. Its root history is fixed in advance, whatever the processor does, including feedback
+  through the consumer (\cref{def:robust,prop:substitution}). No control schedule is an input of the
+  dynamics, and no vertex is forced from outside during the evolution: $T$ with $x(0)$ is a closed,
+  autonomous system.
+\item \emph{Compatibility with the operations.} Every word demanded by the operations is realisable
+  by a fixed-phase generator. This is \cref{thm:forced}\ref{forced:phase}, proved through the
+  cell-phase and concatenation lemmas, the timing signatures, and the explicit alignment waits.
+  Every constant control during \HOLD\ is also supplied by a generator over the whole horizon.
+\item \emph{Constructibility.} See \cref{prop:logspace} below.
+\end{itemize}
+
+\subsection{Degree, acyclicity and size}
+
+\begin{proposition}[Topology]\label{prop:topology}
+$T$ is a tree, and every vertex of $T$ has degree $1$, $3$ or $4$.
+\end{proposition}
+
+\begin{proof}
+$P(m)$ is a tree whose slots are leaves (\cref{lem:proctopology}). By
+\cref{prop:substitution}\ref{sub:tree}, $T$ is a tree, the processor vertices keep degree four, and
+every generator vertex keeps its degree in $\{1,3,4\}$, consumer edge included (\cref{cor:words}).
+No two generators share a vertex, and no root is identified with another root.
+\end{proof}
+
+\begin{proposition}[Size]\label{prop:size}
+$|V(T)|=O(m\,\Hz^{\alpha+3})=O(m^{2\alpha+7})\subseteq O(m^{13})$.
+\end{proposition}
+
+\begin{proof}
+The processor has $4m+7$ cells and $m+1$ junctions. It therefore has $4(4m+7)+(m+1)+(m+3)=O(m)$
+control slots: four per cell, two at each endpoint; one per junction; and $m+3$ far clocks. Each
+generator has size $O((\Hz+2)^{\alpha+3})$ by \cref{cor:words}, and $\Hz=\tau+3=O(m^2)$ by
+\cref{cor:tau}. Since $\alpha<3$, the exponent satisfies $2\alpha+7<13$. The bound is conservative,
+not optimised, and $T$ is listed explicitly, not described succinctly.
+\end{proof}
+
+\subsection{Logspace constructibility}
+
+\begin{proposition}[Logspace transducer]\label{prop:logspace}
+The map $\mathcal P\mapsto(T,x(0),v^\ast,\tau)$ is computable in space $O(\log m)$, hence in
+logarithmic space in the length of the encoding of $\mathcal P$.
+\end{proposition}
+
+\begin{proof}
+We describe three subroutines, each using $O(\log m)$ bits of work space, and compose them.
+
+\emph{(1) Schedule interpretation.} Given a slot $\sigma$ and a time $t\le\Hz$, the bit
+$w_\sigma(t)$ is computed by scanning the program schedule. Keep a time counter, the current
+instruction register $k$, its operands $i_k,j_k$ (reread from the input when needed), the current
+background, the index of the current phase of \cref{tab:instruction} or of the normalisation, and
+route or wave counters. These are $O(1)$ integers below $\Hz+m$. Each phase has a known duration,
+and each alignment wait is decided by a parity comparison, so the scan advances phase by phase until
+the phase containing $t$ is found. The value of $\sigma$ at $t$ is then read off the phase
+description: a mode of the cell, a control value, or the rest value of the current background. Only
+the current bit of the queried slot is stored. Nothing depends on the values in the registers: the
+scan never evaluates the program (\cref{rem:twospaces}). The same scan, run to the end, computes
+$\tau$, which is written in binary.
+
+\emph{(2) Processor emission.} The cells, junctions, endpoints, slots and edges of $P(m)$ are
+indexed by $O(\log m)$-bit names, and the initial bits $\NORMAL(0,\rho_0)$ are read from $\iota_0$.
+Phases are given by \cref{def:procphases}.
+
+\emph{(3) Generator emission.} For each slot $\sigma$, run the procedure of \cref{lem:genlogspace} with
+$\beta=\beta_\sigma$ and the membership oracle $t\in D(w_\sigma,\beta_\sigma)$, which is
+$w_\sigma(t)\ne\beta_\sigma\oplus(t\bmod2)$ and is answered by subroutine (1). It uses
+$O(\log(\Hz+2))=O(\log m)$ bits. Generator vertex names are prefixed by the name of $\sigma$, and the
+root is emitted with the name of the slot, which realises the identification of
+\cref{prop:substitution}.
+
+Composition: subroutine (3) calls (1) as an oracle, recomputing answers on demand. The composition of
+logspace computations is computable in logspace~\cite{Jon75,LL76}. Because $\Hz$ is polynomial in
+$m$, all counters stay within $O(\log m)$ bits.
+\end{proof}
+
+\begin{proof}[Proof of \cref{thm:simulation}, prediction part]
+Items~\ref{sim:tree} and~\ref{sim:size} are \cref{prop:topology,prop:size}; \ref{sim:time} is
+\cref{cor:tau}; \ref{sim:correct} is \cref{prop:correct}. Logspace computability is
+\cref{prop:logspace}. The extension to arbitrary MSLPs composes with \cref{lem:normalform}. The
+eventual-activation part is proved in \cref{sec:ever}.
+\end{proof}

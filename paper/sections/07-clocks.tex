@@ -1,0 +1,446 @@
+% ====================================================================
+\section{Synchronisation and clocks}\label{sec:clocks}
+% ====================================================================
+
+This section answers three questions about the control words. Which words can a single autonomous
+tree produce (\cref{sec:phasewords,sec:generators})? How do we certify that every control word of the
+processor is such a word (\cref{sec:phasecalc})? And how are the generating trees written in
+logarithmic space (\cref{sec:enum})?
+
+\subsection{Phase words}\label{sec:phasewords}
+
+\begin{definition}[Phase words]\label{def:phaseword}
+Let $\beta\in\{0,1\}$ and $\Hz\in\mathbb N$. A word $w:[0,\Hz]\to\{0,1\}$ is \emph{$\beta$-phased} if
+\begin{equation}\label{eq:phase}
+w(s)\ne w(s-1)\ \Longrightarrow\ w(s)=\beta\oplus(s\bmod 2)\qquad(1\le s\le\Hz).
+\end{equation}
+Its \emph{defect set} is $D(w,\beta)=\{t\in[0,\Hz]:\ w(t)\ne\beta\oplus(t\bmod 2)\}$.
+\end{definition}
+
+So with $\beta=0$ rises occur at odd times and falls at even times; with $\beta=1$ the parities
+are reversed. Constant intervals of any length are allowed, provided that the changes at their ends
+have the right parity. The initial bit $w(0)$ is unconstrained.
+
+\begin{lemma}[Characterisation]\label{lem:charwords}
+$w$ is $\beta$-phased if and only if $D(w,\beta)$ contains no two consecutive integers.
+\end{lemma}
+
+\begin{proof}
+Put $\delta(t)=w(t)\oplus\beta\oplus(t\bmod 2)$, the indicator of $D$. Then
+$\delta(s)\oplus\delta(s-1)=w(s)\oplus w(s-1)\oplus 1$. If $w$ retains its value at $s$, then
+$\delta(s)\ne\delta(s-1)$, so $s-1,s$ are not both defects. If $w$ changes at $s$, then
+$\delta(s)=\delta(s-1)$, and both are defects exactly when $w(s)\ne\beta\oplus(s\bmod 2)$. Thus a
+consecutive pair of defects at $(s-1,s)$ occurs exactly when \eqref{eq:phase} fails at $s$.
+\end{proof}
+
+\begin{remark}\label{rem:notarbitrary}
+Phase words are \emph{not} arbitrary synchronous words. Prescribing the samples at one parity does
+not justify ignoring the updates in between. In what follows every physical operation is checked at
+every transition, and every control slot keeps a single fixed phase during the whole program.
+\end{remark}
+
+\subsection{The phase calculus}\label{sec:phasecalc}
+
+A \emph{phase assignment} gives each control slot a phase in $\{0,1\}$, such that the four slots of
+a cell $X$ share one phase $e_X$. We write $e_g$ for the phase of the control of a junction $g$, and
+$e_\kappa$ for the phase of an external port $\kappa$ when it is realised by a generator.
+
+\begin{lemma}[Cell phase]\label{lem:cellphase}
+Let $X$ have phase $e$ and mode word $\mu$ on $[0,\Hz]$. The four slot words of $X$ are $e$-phased if
+and only if, for every $s\in[1,\Hz]$ with $\mu(s)\ne\mu(s-1)$:
+\begin{enumerate}[label=(\alph*)]
+\item if $\mu(s)=\FAV z$, then $s\equiv e\oplus z\pmod 2$;
+\item if $\mu(s-1)=\FAV z$, then $s\equiv e\oplus z\oplus 1\pmod 2$.
+\end{enumerate}
+Equivalently, every maximal $\FAV z$-block that starts in $[1,\Hz]$ starts at a time of parity
+$e\oplus z$; and every maximal block that ends inside the horizon, followed by a different mode, has
+odd length.
+\end{lemma}
+
+\begin{proof}
+The first slot word is $\one\{\mu=\LOAD\}$ and the second is $\one\{\mu\ne\RESET\}$. There are six
+kinds of mode changes at $s$:
+\begin{center}\small
+\begin{tabular}{lll}\toprule
+change at $s$ & slot changes & parity required by \eqref{eq:phase}\\\midrule
+$\HOLD\to\LOAD$ & first slot rises & $s\equiv e\oplus1$\\
+$\LOAD\to\HOLD$ & first slot falls & $s\equiv e$\\
+$\HOLD\to\RESET$ & second slot falls & $s\equiv e$\\
+$\RESET\to\HOLD$ & second slot rises & $s\equiv e\oplus 1$\\
+$\RESET\to\LOAD$ & both rise & $s\equiv e\oplus1$\\
+$\LOAD\to\RESET$ & both fall & $s\equiv e$\\\bottomrule
+\end{tabular}
+\end{center}
+In every row the required parity is the one demanded by (a) for the new mode, if it is not \HOLD,
+and by (b) for the old mode, if it is not \HOLD. When both apply, as in the last two rows, they demand
+the same parity. Conversely (a) and (b) give exactly the parities of the table. A block that starts
+at parity $e\oplus z$ and ends at parity $e\oplus z\oplus 1$ has odd length.
+\end{proof}
+
+\begin{lemma}[Single-bit controls]\label{lem:bitphase}
+A junction control or an external port of phase $e$ has an $e$-phased word if and only if each change
+of its value to $v$ happens at a time $s\equiv e\oplus v$.
+\end{lemma}
+
+\begin{proof}
+This is \eqref{eq:phase} restated.
+\end{proof}
+
+\begin{definition}[Blocks and admissibility]\label{def:block}
+A \emph{block} is a triple $(X,[s,s+\ell),z)$ meaning that cell $X$ is in $\FAV z$ during
+$[s,s+\ell)$. It is \emph{admissible} if $\ell$ is odd and $s\equiv e_X\oplus z$. A \emph{control
+event} $(g,s,v)$ means that the control of $g$ changes to $v$ at time $s$. It is \emph{admissible} if
+$s\equiv e_g\oplus v$, and similarly for external ports.
+\end{definition}
+
+\begin{lemma}[Concatenation]\label{lem:concat}
+Suppose that the mode word of a cell $X$ on $[0,\Hz]$ is \HOLD\ outside a family of pairwise
+disjoint admissible blocks, all contained in $[0,\Hz)$. Then the slot words of $X$ are
+$e_X$-phased. In particular, two admissible blocks of the same mode are never adjacent, so blocks
+never merge. (A block starting at time $0$ causes no change at time $0$; its start parity is
+admissible anyway, and only its end is constrained by \cref{lem:cellphase}.)
+\end{lemma}
+
+\begin{proof}
+Let $(X,[s,s+\ell),z)$ and $(X,[s+\ell,s+\ell+\ell'),z')$ be adjacent admissible blocks. Then
+$s+\ell\equiv e_X\oplus z\oplus 1$ because $\ell$ is odd, and $s+\ell\equiv e_X\oplus z'$ by
+admissibility. Hence $z'\ne z$. So the maximal constant-mode intervals that are not \HOLD\ are
+exactly the given blocks. Each starts at parity $e_X\oplus z$ and has odd length, and
+\cref{lem:cellphase} applies.
+\end{proof}
+
+\begin{remark}\label{rem:merging}
+Without the concatenation lemma, a subtle failure would be possible. Two three-step $\FAV z$ phases
+scheduled back to back on the same cell would form one block of length six, whose end has the wrong
+parity. The original manuscript does not discuss this case. \Cref{lem:concat} shows that it cannot
+arise once every scheduled block is admissible.
+\end{remark}
+
+\paragraph{Timing signatures.}
+A primitive is a schedule fragment given relative to its start $s$: a list of blocks with offsets
+$(X,[s+a,s+a+\ell),z)$ and of control events $(g,s+a,v)$. In background $c$ every mode and every
+control value is of the form $z=c\oplus\zeta$ with $\zeta\in\{0,1\}$; here $\zeta=0$ means
+``favour/assert the background''. Admissibility of an event of phase $e$ at offset $a$ then reads
+\begin{equation}\label{eq:startparity}
+s\equiv e\oplus c\oplus\zeta\oplus a\pmod 2 .
+\end{equation}
+A primitive has \emph{reference parity} $\pi$ if all its events are admissible exactly when
+$s\equiv\pi$. By \eqref{eq:startparity}, the reference parity of the background-$c$ instance is that
+of the background-$0$ instance shifted by $c$. This is how duality (\cref{lem:duality}) acts on
+timings.
+
+\begin{lemma}[Timing signatures]\label{lem:timing}
+With the local phase conventions of \cref{tab:timing}, each primitive has the stated duration and
+reference parity, and all its blocks have odd length.
+\end{lemma}
+
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{4.3cm}cc}\toprule
+primitive & local phases & duration & reference parity\\\midrule
+$\prim{SET}(X\mathbin{:=}c\oplus\zeta)$ & $e_X$ & $3$ & $e_X\oplus c\oplus\zeta$\\
+$\prim{COPY}$ into $X$, mode $\FAV{c\oplus\zeta}$ & $e_X$ & $3$ & $e_X\oplus c\oplus\zeta$\\
+$\prim{MOVE}_{c\oplus\zeta}(X\to Y)$ & $e_Y=e_X\oplus 1$ & $3$ & $e_X\oplus c\oplus\zeta$\\
+$\prim{ROUTE}(g;A\to B;C)$ & arms $e$, $h_g$: $e\oplus1$ & $6$ & $e\oplus c$\\
+$\prim{GATE}_c(g;A,B\to C)$ & arms $e$, $h_g$: $e\oplus1$ & $5$ & $e\oplus c\oplus 1$\\
+$\prim{READ}(g;A;C,K,R)$ & $A,B,C,R$: $e$; $K,h_g$: $e\oplus1$ & $14$ & $e\oplus c$\\\bottomrule
+\end{tabular}
+\caption{Timing signatures. The reference parity is the parity of the start time $s$ for which all
+blocks and control events of the primitive are admissible.}
+\label{tab:timing}
+\end{table}
+
+\begin{proof}
+We list each event as (phase $e'$, $\zeta$, offset $a$) and evaluate $e'\oplus c\oplus\zeta\oplus a$
+by \eqref{eq:startparity}.
+\begin{itemize}
+\item \prim{SET}, \prim{COPY}: one block $(e_X,\zeta,0)$ of length $3$.
+\item \prim{MOVE}: $X$ gives $(e_X,\zeta,0)$; $Y$ in $\FAV{1-z}$ gives
+  $(e_X\oplus1,\zeta\oplus 1,0)$. Both give $e_X\oplus c\oplus\zeta$. Lengths are $3$.
+\item \prim{ROUTE}: source $(e,0,0)$; destination $(e,1,3)$; $h_g\to b$ is $(e\oplus1,1,0)$; $h_g\to c$
+  is $(e\oplus1,0,3)$. All four give $e\oplus c$. Lengths are $3$.
+\item \prim{GATE}: output $(e,1,0)$, of length $5$; operands $(e,0,1)$, of length $3$; $h_g\to b$ is
+  $(e\oplus1,1,1)$; $h_g\to c$ is $(e\oplus1,0,4)$. All give $e\oplus c\oplus1$.
+\item \prim{READ}: $h_g\to b$ is $(e\oplus1,1,0)$ and $h_g\to c$ is $(e\oplus1,0,11)$. $K$ has blocks
+  $(e\oplus1,0,1)$ and $(e\oplus1,1,4)$; $C$ has $(e,0,4)$ and $(e,1,11)$; $A$ has $(e,0,8)$ and
+  $(e,1,11)$. All give $e\oplus c$. All blocks have length $3$, and the two blocks of $K$, and the
+  two blocks of $A$, are adjacent with different modes.\qedhere
+\end{itemize}
+\end{proof}
+
+\subsection{Robust generators: constants, timers and pulses}\label{sec:timers}
+
+Robust generators were defined in \cref{def:robust}. All branches below are private, disjoint copies.
+
+\paragraph{Constant sources.} A \emph{constant source} of bit $c$ consists of a root and two leaves,
+all initially $c$. With its consumer the root has degree three: its two leaves always vote $c$, so
+it stays $c$, and the leaves copy the root. It is a robust generator of the constant word $c$, with
+three vertices and degrees $1$ and $3$.
+
+\begin{lemma}[Timers]\label{lem:timers}
+For every $h\ge 0$ there is a robust generator $D_h$ of $t\mapsto\one\{t<h\}$, with $8h-1$ vertices
+if $h\ge 1$ and $7$ if $h=0$, using only degrees $1$ and $3$, consumer edge included. Complementing
+all initial bits gives a robust generator $U_h$ of $\one\{t\ge h\}$.
+\end{lemma}
+
+\begin{proof}
+For $h=0$, take a root initially $0$ with two constant-zero sources. For $h\ge 1$, initialise the
+root to $1$ and put $L=h-1$. If $L=0$, attach two constant-zero sources to the root. If $L\ge 1$,
+attach two identical chains $p_{L-1},\dots,p_0$, numbered from the bottom $p_0$, all initially
+$1$. The head $p_{L-1}$ is adjacent to the root. For $k\ge 1$, $p_k$ is adjacent to its parent,
+its child $p_{k-1}$ and one constant-zero source. The bottom $p_0$ is adjacent to its parent and two
+constant-zero sources. Every chain vertex has degree three and computes
+$\MAJ_3(\text{parent},\text{child},0)=\text{parent}\wedge\text{child}$, where the bottom's missing
+child is read as $0$.
+
+We prove by induction on $t$, simultaneously for all vertices and for an arbitrary consumer history,
+that
+\[
+x_{p_k}(t)=\one\{t<k+1\},\qquad x_{\mathrm{root}}(t)=\one\{t<h\}.
+\]
+At $t=0$ all these bits are $1$. For the step: $x_{p_0}(t+1)=0=\one\{t+1<1\}$. For $k\ge 1$, the
+child gives $x_{p_{k-1}}(t)=\one\{t<k\}$. The parent is $p_{k+1}$ with history $\one\{t<k+2\}$, or the
+root with history $\one\{t<L+1\}$, which is the same expression when $k=L-1$. In both cases the
+parent's bit is $1$ whenever $t<k$, so the conjunction equals $\one\{t<k\}=\one\{t+1<k+1\}$. The two
+heads have equal histories, so the root computes $\MAJ_3(\text{head},\text{head},y(t))$, which is the
+head's bit $\one\{t<L\}=\one\{t+1<h\}$ whatever $y(t)$ is. The same induction covers $L=0$.
+
+The size is $1+2\bigl(L+3(L-1)+6\bigr)=8h-1$ for $L\ge1$, and $7$ for $h\in\{0,1\}$. Complementation
+preserves majority at odd degree (\cref{lem:selfdual}), and maps arbitrary consumer histories
+bijectively to arbitrary consumer histories.
+\end{proof}
+
+No robustness is claimed for a chain head on its own. The construction duplicates synchronised
+chains; it does not recursively duplicate robust timers.
+
+\begin{lemma}[Pulses]\label{lem:pulses}
+For integers $0\le a<b$ there is a robust generator $P_{a,b}$ of $t\mapsto\one\{a\le t<b\}$ with
+$O((a+b+1)^2)$ vertices, using only degrees $1$ and $3$. Its history is exact for all $t\ge 0$; in
+particular it is $0$ for all $t\ge b$.
+\end{lemma}
+
+\begin{proof}
+If $a=0$, use $D_b$. Otherwise put $B=b-a\ge 1$ and $L=a-1$, and initialise the root to $0$. If
+$L=0$, its two children are private copies of $D_B$, so the root's bit at $t+1$ is $D_B(t)$, and its
+history is $\one\{1\le t<B+1\}$. If $L\ge 1$, attach two identical chains $p_{L-1},\dots,p_0$,
+initially $0$, with the head adjacent to the root. $p_0$ is adjacent to its parent and two copies of
+$D_B$. For $k\ge1$, $p_k$ is adjacent to its parent, to $p_{k-1}$, and to one copy of $D_{B+k}$. We
+claim
+\[
+x_{p_k}(t)=\one\{k+1\le t<B+k+1\},\qquad x_{\mathrm{root}}(t)=\one\{L+1\le t<B+L+1\}=\one\{a\le t<b\}.
+\]
+At $t=0$ all these bits are $0$. The bottom copies its two equal timers:
+$x_{p_0}(t+1)=D_B(t)$. For $k\ge 1$ consider control time $t$:
+\begin{itemize}
+\item if $t<k$: the child is $0$. The parent is $p_{k+1}$, with history $\one\{k+2\le t<\dots\}$, or
+  the root, with history $\one\{L+1\le t<\dots\}$, which is the same when $k=L-1$; so it is $0$ too.
+  Hence $x_{p_k}(t+1)=0$;
+\item if $t=k$: the child is $\one\{k\le k<B+k\}=1$ and the timer is $\one\{k<B+k\}=1$, so
+  $x_{p_k}(k+1)=1$;
+\item if $k<t<B+k$: the child and the timer are $1$;
+\item if $t\ge B+k$: the child and the timer are $0$.
+\end{itemize}
+Only the first case uses the parent, through the induction hypothesis. The two heads agree, so the
+root copies them whatever its consumer does. One branch has $L$ chain vertices, two copies of $D_B$,
+and one $D_{B+k}$ for each $1\le k<L$. Its size is
+$O\bigl(L+B+\sum_{k=1}^{L-1}(B+k)\bigr)=O((a+b+1)^2)$.
+\end{proof}
+
+\subsection{The phase-defect theorem}\label{sec:generators}
+
+\begin{theorem}[Phase-defect generators]\label{thm:phasedefect}
+Let $D\subseteq\mathbb N$ be finite with no two consecutive elements. Put $K=|D|$, fix $\Hz\ge\max D$
+($\Hz=0$ if $D=\emptyset$), and let $\beta\in\{0,1\}$. There is a robust generator $\Gamma(D,\beta)$
+of
+\[
+h(t)=\beta\oplus(t\bmod 2)\oplus\one\{t\in D\}\qquad(t\ge 0),
+\]
+with all degrees in $\{1,3,4\}$, consumer edge included, and size
+\begin{equation}\label{eq:gensize}
+|\Gamma(D,\beta)|=O\bigl((K+1)^{\alpha}(\Hz+1)^3\bigr),\qquad \alpha=\frac{\log 3}{\log(3/2)}<3 .
+\end{equation}
+\end{theorem}
+
+The output alternates after the last defect: the theorem does not promise a constant tail. The
+proof uses one recursive step (the combiner) and three base cases.
+
+\begin{lemma}[Combiner]\label{lem:combiner}
+Let $D$ and $\beta$ be as in \cref{thm:phasedefect}, and let $E=D\setminus\{0\}$, with its elements
+ranked $0,1,2,\dots$ in increasing order. For $j\in\{0,1,2\}$ put
+\begin{equation}\label{eq:childsets}
+D_j=\{a-1:\ a\in E,\ \rank_E(a)\not\equiv j\pmod 3\}.
+\end{equation}
+Let $\gamma$ be a vertex with initial bit $\beta\oplus\one\{0\in D\}$, whose three children are the
+roots of robust generators $\Gamma_j$ of $g_j(t)=(1-\beta)\oplus(t\bmod 2)\oplus\one\{t\in D_j\}$. Then
+the tree rooted at $\gamma$ is a robust generator of $h$, and $\gamma$ has degree four with its
+consumer. Each $D_j$ has no two consecutive elements, $\max D_j\le\max D-1$, and every element of
+$E$ is passed, shifted by $-1$, to exactly two of the three children.
+\end{lemma}
+
+\begin{proof}
+For $t\ge0$ we have $t+1\ge1$, so $t+1\in D$ if and only if $t+1\in E$, and
+\[
+\begin{aligned}
+g_j(t)&=\beta\oplus\bigl((t+1)\bmod 2\bigr)\oplus\one\{t+1\in E,\ \rank(t+1)\not\equiv j\}\\
+&=h(t+1)\oplus\one\{t+1\in E,\ \rank(t+1)\equiv j\}.
+\end{aligned}
+\]
+So all three children equal $h(t+1)$ when $t+1\notin D$, and exactly two of them do when $t+1\in D$.
+We prove $x_\gamma(t)=h(t)$ by induction on $t$, for an arbitrary consumer history. The base case is
+the initial bit. For the step, $x_\gamma(t+1)$ is $\MAJ_5$ of $x_\gamma(t)$, the consumer and the
+three children:
+\begin{itemize}
+\item if $t+1\notin D$, the three children vote $h(t+1)$, which decides $\MAJ_5$;
+\item if $t+1\in D$, then $t\notin D$ (no consecutive defects), so
+  $h(t+1)=\beta\oplus(t+1)\oplus1=\beta\oplus t=h(t)=x_\gamma(t)$. Two children and the self-vote give
+  three votes for $h(t+1)$.
+\end{itemize}
+The children are robust and their consumer is $\gamma$, so their histories are as stated. Each $D_j$
+is a subset of the shift $E-1$ of a set with no consecutive elements, which proves the remaining
+claims.
+\end{proof}
+
+The original manuscript distinguishes three cases for the transition at $t$. The proof above merges
+the two cases with $t+1\notin D$, because in both of them all three children agree with the target.
+
+\begin{lemma}[Parity transformation]\label{lem:paritytransform}
+Let $\Gamma$ be a robust generator of $h$ with root $\gamma$, in which every vertex has odd degree,
+consumer edge included. Let $\chi(v)=\dist(v,\gamma)\bmod 2$, and let $\Gamma^\beta$ be obtained by
+complementing the initial bit of every $v$ with $\chi(v)\oplus\beta=1$. Then $\Gamma^\beta$ is a robust
+generator of $h(t)\oplus(t\bmod2)\oplus\beta$.
+\end{lemma}
+
+\begin{proof}
+Let $M_v(t)=(t\bmod 2)\oplus\chi(v)\oplus\beta$, and given a trajectory $x$ of $\Gamma$ put
+$y_v(t)=x_v(t)\oplus M_v(t)$. If $u$ is adjacent to $v$ then $\chi(u)=\chi(v)\oplus1$, so
+$M_u(t)=M_v(t+1)$. At odd degree there is no self-vote, and $\MAJ$ commutes with complementing all
+arguments. Hence
+\[
+y_v(t+1)=\MAJ\bigl(x_u(t)\bigr)_u\oplus M_v(t+1)=\MAJ\bigl(x_u(t)\oplus M_u(t)\bigr)_u=\MAJ\bigl(y_u(t)\bigr)_u,
+\]
+so $y$ is a trajectory of $\Gamma^\beta$, with $y(0)$ the stated initial bits. The consumer is at odd
+distance, and $y_\epsilon(t)=x_\epsilon(t)\oplus(t+1+\beta)\bmod 2$ is a bijection between consumer
+histories. So every consumer history of $\Gamma^\beta$ arises from one of $\Gamma$, and
+$y_\gamma(t)=h(t)\oplus(t\bmod2)\oplus\beta$.
+\end{proof}
+
+The transformation is applied only to the odd-degree pulse trees, never to a degree-four combiner,
+where the self-vote would carry the wrong mask.
+
+\begin{proof}[Proof of \cref{thm:phasedefect}]
+We first give the base cases $K\le 2$, then the recursion.
+
+\emph{$K=0$.} The root has initial bit $\beta$ and two leaves with initial bit $1-\beta$. With its
+consumer the root has degree three. The leaves copy the root, and the root copies the two equal
+leaves, so the root alternates starting from $\beta$ whatever the consumer does. Three vertices.
+
+\emph{$K=1$, $D=\{a\}$.} Apply \cref{lem:paritytransform} to the pulse $P_{a,a+1}$ of
+\cref{lem:pulses}, which has degrees $1$ and $3$. The root history becomes
+$\one\{t=a\}\oplus(t\bmod2)\oplus\beta=h(t)$. Size $O((a+1)^2)$.
+
+\emph{$K=2$, $D=\{a,b\}$ with $b-a\ge 2$.} Apply the combiner. Since $0\notin D$ when $a>0$, the ranks
+are $\rank(a)=0$ and $\rank(b)=1$, and the child sets are
+\[
+D_0=\{b-1\},\qquad D_1=\{a-1\},\qquad D_2=\{a-1,b-1\}.
+\]
+Only the third child needs another two-event construction. After $\ell\le a$ such steps, the
+continuation has defect set $\{a-\ell,b-\ell\}$, phase $\beta\oplus(\ell\bmod2)$, and initial bit
+$\beta\oplus(\ell\bmod 2)\oplus\one\{a=\ell\}$. At $\ell=a$ the set is $\{0,b-a\}$. Zero is removed
+\emph{before} ranking, so the child sets are $\emptyset$, $\{b-a-1\}$ and $\{b-a-1\}$, all handled by
+the bases $K\le1$. In total there are $a+1$ combiners and $2(a+1)$ bases with zero or one defect,
+each of size $O((b+1)^2)$, so the size is $O((a+1)(b+1)^2)=O((\Hz+1)^3)$. The chain is indexed by
+$\ell=0,\dots,a$, which gives an explicit enumeration without a recursion stack of depth $a$
+(\cref{sec:enum}).
+
+\emph{$K\ge3$.} Apply the combiner recursively until the sets have at most two events. Let
+$\sigma=\one\{0\in D\}$ and $n=|E|=K-\sigma$. The number of ranks in $[0,n)$ congruent to $j$ is at
+least $\lfloor n/3\rfloor$. Hence
+\[
+K_{\text{child}}\le n-\lfloor n/3\rfloor=\Bigl\lceil\frac{2(K-\sigma)}{3}\Bigr\rceil\le\frac{2K+2}{3},
+\qquad K_{\text{child}}-2\le\frac23(K-2).
+\]
+A node at depth $d$ of the recursion has at most $2+(2/3)^d(K-2)$ events. A node is expanded by a
+further combiner only if it has at least three events, so its depth is at most $\log_{3/2}(K-2)$. The
+expanded nodes form a ternary tree with at most
+$\sum_{d\le\log_{3/2}(K-2)}3^d\le\tfrac32(K-2)^{\alpha}$ nodes. The terminal nodes, those with at
+most two events, number at most three times as many, and each costs $O((\Hz+1)^3)$, because all
+defects stay in $[0,\Hz]$. This proves \eqref{eq:gensize}.
+
+\emph{Topology and robustness.} Each component is joined to its private child trees by single
+edges, so the result is a tree. Combiners have degree four; the bases with zero or one defect have
+degrees $1$ and $3$. Robustness follows by induction from the bases upwards, using
+\cref{lem:combiner,lem:paritytransform}.
+\end{proof}
+
+\begin{corollary}[Realised words]\label{cor:words}
+Let $w:[0,\Hz]\to\{0,1\}$ be $\beta$-phased. Then $\Gamma\bigl(D(w,\beta),\beta\bigr)$ is a robust
+generator whose root history equals $w(t)$ for every $t\in[0,\Hz]$, including $t=0$. It has degrees
+in $\{1,3,4\}$ and size $O\bigl((\Hz+2)^{\alpha+3}\bigr)\subseteq O\bigl((\Hz+2)^6\bigr)$. After $\Hz$
+its history alternates.
+\end{corollary}
+
+\begin{proof}
+By \cref{lem:charwords}, $D=D(w,\beta)$ has no two consecutive elements, so \cref{thm:phasedefect}
+applies. For $t\le\Hz$, $h(t)=\beta\oplus t\oplus\one\{t\in D\}=w(t)$. The event at time zero, if any,
+is absorbed in the initial bit. Finally $K\le\Hz+1$.
+\end{proof}
+
+\subsection{Logspace enumeration of the generators}\label{sec:enum}
+
+\begin{lemma}[Uniformity]\label{lem:genlogspace}
+There is a deterministic procedure which, given $\Hz$, $\beta$ and access to a membership oracle for
+$D\subseteq[0,\Hz]$, lists the vertices, edges and initial bits of $\Gamma(D,\beta)$ using
+$O(\log(\Hz+2))$ bits of work space, not counting the oracle. Vertex names have $O(\log(\Hz+2))$
+bits.
+\end{lemma}
+
+\begin{proof}
+\emph{Skeleton addresses.} A node of the combiner recursion is named by its address
+$p=(j_1,\dots,j_d)\in\{0,1,2\}^d$. Its defect set is $D_p$, with $D_{()}=D$ and
+$D_{p\,j}=(D_p)_j$ as in \eqref{eq:childsets}. Expanded nodes have depth at most $\log_{3/2}K+1$, so
+addresses have $O(\log(K+2))$ symbols.
+
+\emph{Counting recurrence.} Let $Q_p(t)=|D_p\cap[0,t]|$, with $Q_p(t)=0$ for $t<0$. Let
+$\sigma_p=Q_p(0)=\one\{0\in D_p\}$, and for $u\ge0$ let
+\[
+F_j(u)=u-\Bigl\lfloor\frac{u+2-j}{3}\Bigr\rfloor\qquad(j=0,1,2),
+\]
+which counts the ranks in $[0,u)$ that are not congruent to $j$. Then
+\begin{equation}\label{eq:counting}
+Q_{p\,j}(t)=F_j\bigl(Q_p(t+1)-\sigma_p\bigr)\qquad(t\ge 0).
+\end{equation}
+Indeed, the elements of $D_{pj}$ in $[0,t]$ are the values $a-1$ for $a\in E_p\cap[1,t+1]$ with
+$\rank(a)\not\equiv j$. The set $E_p\cap[1,t+1]$ consists of the $u=Q_p(t+1)-\sigma_p$ elements of
+smallest rank, namely the ranks $0,\dots,u-1$.
+
+\emph{Evaluation.} Let $p_r$ be the prefix of $p$ of length $r$. Iterating \eqref{eq:counting},
+$Q_{p}(t)$ is obtained from $u=Q(t+d)$ by applying $u\leftarrow F_{j_r}(u-\sigma_{p_{r-1}})$ for
+$r=1,\dots,d$. The bits $\sigma_{p_0},\dots,\sigma_{p_{d-1}}$ are computed in this order, each by
+the same procedure with $t=0$ applied to the prefix. Thus only the address, $d$ zero-event bits, and
+a constant number of counters of $O(\log(\Hz+K+2))$ bits are stored. The root count $Q(t)$ is
+obtained by scanning $[0,t]$ with the oracle. Starting from $u=K$ instead of $Q(t+d)$ gives $|D_p|$.
+At a terminal node, the at most two dates are found by scanning $t=0,\dots,\Hz$ and comparing
+$Q_p(t)$ with $Q_p(t-1)$.
+
+\emph{Emission.} Enumerate the addresses of length at most $4\lceil\log_2(K+2)\rceil+4$, and keep
+those whose proper prefixes all have more than two events. There are polynomially many candidates.
+For each kept node, emit a combiner, with phase $\beta\oplus(d\bmod2)$ and initial bit
+$\beta\oplus(d\bmod2)\oplus\sigma_p$, and its edges to its children; or, at a terminal node, emit the
+base:
+\begin{itemize}
+\item a two-event base: its explicit chain indexed by $\ell$, with the phases and initial bits given
+  in the proof of \cref{thm:phasedefect};
+\item a one-event base: the pulse tree of \cref{lem:pulses}. Each name records branch, chain index,
+  timer index and position inside the timer and constant sources, so the distance parity to the pulse
+  root, and hence the complementation of \cref{lem:paritytransform}, is computed arithmetically;
+\item a zero-event base: three vertices.
+\end{itemize}
+Every name consists of an address, a base type and $O(1)$ indices bounded by $\Hz+2$.
+\end{proof}
+
+\begin{remark}\label{rem:largedates}
+For dates that are polynomially bounded in an external input size, and a logspace membership
+predicate, composition gives ordinary logspace uniformity in that input size. For arbitrarily large
+binary dates the lemma gives only the stated space bound in terms of $\Hz$. We do not claim
+polynomial size in $\log\Hz$ for exponentially large dates.
+\end{remark}

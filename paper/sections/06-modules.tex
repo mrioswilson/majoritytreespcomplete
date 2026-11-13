@@ -1,0 +1,414 @@
+% ====================================================================
+\section{Local modules: storage, transport, logic and reading}\label{sec:modules}
+% ====================================================================
+
+Every statement in this section concerns a forced evolution (\cref{def:controlled}). Every
+contract holds for \emph{every} history of the ports that it declares arbitrary, so contracts can be
+composed through \cref{lem:locality}.
+
+\subsection{Cells, junctions and modes}
+
+\begin{definition}[\textsf{EDGE} cell]\label{def:cell}
+A \emph{cell} $X$ is a pair of adjacent vertices, its \emph{endpoints}. Each endpoint has exactly
+four neighbours: its partner, one \emph{data port} outside the cell, and two private control slots.
+If $Y$ is the cell, junction or external vertex attached to an endpoint of $X$, we write $\ep XY$
+for that endpoint. Its data port is the vertex of $Y$ adjacent to it, written $\ep YX$ when $Y$ is a
+cell. The cell is \emph{uniform with value $x$}, written $X=xx$, if both endpoints are in state $x$.
+When the two endpoints differ we list them in the order stated in each proof.
+\end{definition}
+
+Both endpoints of a cell always receive the same pair of control bits. Three pairs are used; they
+are called \emph{modes}:
+\[
+\HOLD=(0,1),\qquad \RESET=(0,0),\qquad \LOAD=(1,1),
+\]
+and we write $\FAV0=\RESET$ and $\FAV1=\LOAD$.
+The pair is \emph{ordered}: in \HOLD\ the first slot of each endpoint carries $0$ and the second
+carries $1$. The \emph{mode word} of $X$ is the map $\mu_X$ from control times to modes.
+
+\begin{lemma}[Modes]\label{lem:modes}
+Let $v$ be an endpoint of a cell, with partner $v'$ and data port $u$. At control time $t$,
+\[
+x_v(t+1)=\begin{cases}
+\AND_3\bigl(x_v(t),x_{v'}(t),x_u(t)\bigr)&\text{in }\RESET,\\
+\MAJ_3\bigl(x_v(t),x_{v'}(t),x_u(t)\bigr)&\text{in }\HOLD,\\
+\OR_3\bigl(x_v(t),x_{v'}(t),x_u(t)\bigr)&\text{in }\LOAD.
+\end{cases}
+\]
+\end{lemma}
+
+\begin{proof}
+By \eqref{eq:maj5}, $x_v(t+1)$ is the majority of five bits: three arguments and the two control
+bits. With $k$ control bits equal to one, the result is one exactly when at least $3-k$ of the three
+arguments are one.
+\end{proof}
+
+\begin{definition}[Junction]\label{def:junction}
+A \emph{junction} $g$ is a single vertex adjacent to one endpoint of each of three cells, its
+\emph{arms}, and to one control slot $h_g$. By \eqref{eq:maj5},
+\[
+x_g(t+1)=\MAJ_5\bigl(x_g(t),a_1(t),a_2(t),a_3(t),h_g(t)\bigr),
+\]
+where $a_1,a_2,a_3$ are the arm
+endpoints adjacent to $g$.
+\end{definition}
+
+A \emph{cell network} is a controlled tree built from cells and junctions. Its control slots are
+the two slots of each cell endpoint and the slot $h_g$ of each junction. Some cell endpoints have,
+as data port, an \emph{external port}: a vertex whose history is supplied from outside. In the
+processor these are the far clocks of \cref{sec:processor}. A \emph{schedule} of a cell network
+consists of a mode word for each cell, a word for each junction control, and a history for each
+external port.
+
+\begin{lemma}[Mode-level duality]\label{lem:duality}
+Let $x(\cdot)$ be the forced evolution of a cell network under a schedule with mode words $\mu_X$,
+junction words $h_g$ and external port histories $y_u$. Define $\mu^\ast_X$ by exchanging $\RESET$
+and $\LOAD$ in $\mu_X$ (\HOLD\ is unchanged), $h^\ast_g=1-h_g$, and $y^\ast_u=1-y_u$. Then
+$\mathbf 1-x(\cdot)$ is the forced evolution under $(\mu^\ast,h^\ast,y^\ast)$ from the initial
+configuration $\mathbf 1-x(0)$.
+\end{lemma}
+
+\begin{proof}
+By \cref{lem:modes} an endpoint applies $f_\mu\in\{\AND_3,\MAJ_3,\OR_3\}$. De Morgan's laws give
+$1-\AND_3(\bar a)=\OR_3(a)$ and $1-\OR_3(\bar a)=\AND_3(a)$, and $\MAJ_3$ is self-dual. Hence
+$1-f_\mu(\mathbf 1-a)=f_{\mu^\ast}(a)$. At junctions, $\MAJ_5$ is self-dual. Induction on time
+concludes.
+\end{proof}
+
+\begin{remark}\label{rem:dualcontrols}
+\Cref{lem:duality} is a statement about \emph{modes}, not about the control bits themselves.
+Literally complementing the control bits of a cell would turn $\HOLD=(0,1)$ into $(1,0)$. That pair
+is also a hold mode, but it is a different pair of slot words. We never do this: in every schedule,
+\HOLD\ is realised by $(0,1)$. The effect of duality on admissible timings is computed in
+\cref{sec:phasecalc}.
+\end{remark}
+
+For a \emph{background} $c\in\{0,1\}$ we write $b=1-c$ throughout. All primitives below are stated for
+an arbitrary background $c$, using $\FAV c$, $\FAV b$ and junction controls equal to $b$ or $c$. By
+\cref{lem:duality}, the instance with $c=1$ is exactly the dual of the instance with $c=0$, so every
+proof below is written for $c=0$ only.
+
+\begin{lemma}[Frame]\label{lem:frame}
+Let $t$ be a control time.
+\begin{enumerate}[label=(\alph*)]
+\item\label{frame:hold} A uniform cell $X=xx$ in \HOLD\ at control time $t$ satisfies $X=xx$ at
+  time $t+1$, whatever its two data ports are.
+\item\label{frame:junction} If a junction satisfies $x_g(t)=h_g(t)=c$, and at most two of its three
+  arm endpoints are in state $b$ at time $t$, then $x_g(t+1)=c$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+\ref{frame:hold} By \cref{lem:modes}, each endpoint computes $\MAJ_3(x,x,\cdot)=x$.
+\ref{frame:junction} At least three of the five arguments of $\MAJ_5$ equal $c$.
+\end{proof}
+
+In every later proof, a cell that a schedule does not mention is in \HOLD. ``By the frame lemma''
+means an application of \cref{lem:frame}. Only the arms of a junction and its control can change
+its state, so to keep an untouched junction at $c$ it suffices to check, at every control time, that
+at most two of its arm endpoints are $b$ and that its control is at rest at $c$.
+
+\subsection{Storage}
+
+\begin{lemma}[Forcing]\label{lem:forcing}
+Let $X$ be in $\FAV z$ at the control times $[t,t+n)$ with $n\ge 2$, and suppose that the data port
+of some endpoint $v$ of $X$ equals $z$ at control time $t$. Then $X=zz$ at every time in
+$[t+2,t+n]$, whatever the initial state of $X$ and whatever its other data port does. If moreover
+$X=zz$ at time $t$, then $X=zz$ at every time in $[t,t+n]$.
+\end{lemma}
+
+\begin{proof}
+For $z=0$: $x_v(t+1)=\AND_3(\cdot,\cdot,0)=0$. Then $x_{v'}(t+2)=\AND_3(\cdot,x_v(t+1),\cdot)=0$
+and $x_v(t+2)=\AND_3(x_v(t+1),\cdot,\cdot)=0$. Once both endpoints are $0$, $\AND_3$ with self
+argument $0$ keeps them at $0$. The case $z=1$ is dual.
+\end{proof}
+
+\begin{definition}[\prim{SET}]\label{def:set}
+$\prim{SET}(X\mathbin{:=}z)$ puts $X$ in $\FAV z$ for three consecutive control times, while some data
+port of $X$ is known to equal $z$ at the first of them. By \cref{lem:forcing}, two transitions
+suffice and the third preserves $X=zz$. Three transitions are used so that the timing matches the
+phase calculus of \cref{sec:phasecalc}.
+\end{definition}
+
+\begin{remark}\label{rem:forcing-hyp}
+The original manuscript states the forcing hypothesis as ``the port stays $z$ for two transitions''.
+\Cref{lem:forcing} needs the port value at the first control time only. This is a weaker hypothesis,
+so every application in the original remains valid.
+\end{remark}
+
+\begin{lemma}[Copy]\label{lem:copy}
+Let $X=cc$ be in $\FAV b$ during $[t,t+n)$ with $n\ge 2$. Let the data port of one endpoint
+$v$ be constantly $x$ during $[t,t+n)$, and the data port of the other endpoint $v'$ be constantly
+$c$. Then $X=xx$ at every time in $[t+2,t+n]$.
+\end{lemma}
+
+\begin{proof}
+For $c=0$ the mode is $\OR_3$. Then $x_v(t+1)=\OR(0,0,x)=x$ and $x_{v'}(t+1)=\OR(0,0,0)=0$.
+Next, $x_v(t+2)=\OR(x,0,x)=x$ and $x_{v'}(t+2)=\OR(0,x,0)=x$. Afterwards
+$x_v=\OR(x,x,x)=x$ and $x_{v'}=\OR(x,x,0)=x$.
+\end{proof}
+
+$\prim{COPY}$ into $X$ is \cref{lem:copy} with $n=3$. Its dual form starts from $X=bb$, uses
+$\FAV c$, has its second port constantly $b$, and again yields $X=xx$. The source of a copy is never
+modified by it: it is either an external port or a uniform cell in \HOLD.
+
+\subsection{Transport}
+
+\begin{lemma}[\prim{MOVE}]\label{lem:move}
+Let $X,Y$ be cells joined by the edge $\ep XY\ep YX$. Let $\ep X{\mathrm f}$ and $\ep Y{\mathrm f}$ be
+their other endpoints, whose data ports are $u_X$ and $u_Y$. Assume that at time $t$ we have
+$X=xx$ and $Y=zz$, and that $u_Y=z$ at control times $t,t+1,t+2$. The history of $u_X$ is arbitrary.
+Put $X$ in $\FAV z$ and $Y$ in $\FAV{1-z}$ during $[t,t+3)$. Then at time $t+3$ we have $X=zz$ and
+$Y=xx$. This is $\prim{MOVE}_z(X\to Y)$.
+\end{lemma}
+
+\begin{proof}
+For $z=0$, writing $P(t)$ for the history of $u_X$, the states are:
+\begin{center}\small
+\begin{tabular}{ccccc}\toprule
+state time & $\ep X{\mathrm f}$ & $\ep XY$ & $\ep YX$ & $\ep Y{\mathrm f}$\\\midrule
+$t$   & $x$ & $x$ & $0$ & $0$\\
+$t+1$ & $x\wedge P(t)$ & $0$ & $x$ & $0$\\
+$t+2$ & $0$ & $0$ & $x$ & $x$\\
+$t+3$ & $0$ & $0$ & $x$ & $x$\\\bottomrule
+\end{tabular}
+\end{center}
+Transition $t$: $\ep XY=\AND(x,x,0)=0$ reads the old $\ep YX=0$, while $\ep YX=\OR(0,0,x)=x$ reads the
+old $\ep XY=x$; and $\ep Y{\mathrm f}=\OR(0,0,u_Y)=0$.
+Transition $t+1$: $\ep X{\mathrm f}=\AND(\cdot,0,\cdot)=0$; $\ep YX=\OR(x,0,0)=x$;
+$\ep Y{\mathrm f}=\OR(0,x,u_Y)=x$ because $u_Y=0$.
+Transition $t+2$: $X$ stays $00$ under $\AND$. On $Y$, $\OR(x,x,\cdot)=x$ when $x=1$, and every
+argument is $0$ when $x=0$.
+\end{proof}
+
+\begin{remark}[No pause inside a move]\label{rem:nopause}
+The three transitions of a move must be consecutive. In the case $P(t)=x$, the state after the
+first transition is $(\ep X{\mathrm f},\ep XY,\ep YX,\ep Y{\mathrm f})=(x,0,x,0)$. If both cells were then
+put in \HOLD\ for one step, \cref{lem:modes} would give
+\[
+\bigl(\MAJ_3(x,0,x),\MAJ_3(0,x,x),\MAJ_3(x,0,0),\MAJ_3(0,x,0)\bigr)=(x,x,0,0),
+\]
+which undoes the transport. Alignment waits (\cref{lem:waits}) are therefore inserted only between
+primitives, at configurations proved to be stable.
+\end{remark}
+
+\begin{lemma}[\prim{ROUTE}]\label{lem:route}
+Let $g$ be a junction with arms $A$ (source), $B$ (destination) and $C$ (bias). Assume at time $s$:
+\[
+x_g=c,\qquad A=xx,\qquad B=cc,\qquad C=bb.
+\]
+Assume also that the data port of $\ep B{\mathrm f}$, the endpoint of $B$ away from $g$, equals $c$ at
+control times $s+3,s+4,s+5$. The port of $\ep A{\mathrm f}$ is arbitrary. Apply:
+\begin{center}\small
+\begin{tabular}{lll}\toprule
+control times & $h_g$ & modes\\\midrule
+$[s,s+3)$ & $b$ & $A$ in $\FAV c$ (receive and erase)\\
+$[s+3,s+6)$ & $c$ & $B$ in $\FAV b$ (send)\\\bottomrule
+\end{tabular}
+\end{center}
+with all other cells in \HOLD. Then at time $s+6$ we have $x_g=c$, $A=cc$, $B=xx$ and $C=bb$. This is
+$\prim{ROUTE}(g;A\to B;C)$, of duration $6$.
+\end{lemma}
+
+\begin{proof}
+For $c=0$, with $P$ the arbitrary port of $\ep A{\mathrm f}$:
+\begin{center}\small
+\begin{tabular}{cccccc}\toprule
+state time & $x_g$ & $\ep A{\mathrm f}$ & $\ep Ag$ & $\ep Bg$ & $\ep B{\mathrm f}$\\\midrule
+$s$   & $0$ & $x$ & $x$ & $0$ & $0$\\
+$s+1$ & $x$ & $x\wedge P$ & $0$ & $0$ & $0$\\
+$s+2$ & $x$ & $0$ & $0$ & $0$ & $0$\\
+$s+3$ & $x$ & $0$ & $0$ & $0$ & $0$\\
+$s+4$ & $0$ & $0$ & $0$ & $x$ & $0$\\
+$s+5$ & $0$ & $0$ & $0$ & $x$ & $x$\\
+$s+6$ & $0$ & $0$ & $0$ & $x$ & $x$\\\bottomrule
+\end{tabular}
+\end{center}
+$C=11$ throughout, by \cref{lem:frame}\ref{frame:hold}.
+Receive, with $h_g=1$ and $C=1$: then $x_g(t+1)=\MAJ_5(x_g,\ep Ag,\ep Bg,1,1)$, which is $\OR_3$ of
+$x_g$, $\ep Ag$ and $\ep Bg$. At control time $s$ this gives $x_g=\OR(0,x,0)=x$, while
+$\ep Ag=\AND(x,x,x_g=0)=0$. At $s+1$, $x_g=\OR(x,0,0)=x$ and $\ep A{\mathrm f}=\AND(\cdot,0,\cdot)=0$.
+At $s+2$ nothing changes. $B=00$ stays in \HOLD\ by the frame lemma, although its port $x_g$ may be
+$1$.
+Send, with $h_g=0$: the only possible one-votes at $g$ are $x_g$, $\ep Bg$ and $C$. At $s+3$ there are
+at most two of them ($x_g=x$ and $C$), so $x_g$ becomes $0$, while $\ep Bg=\OR(0,0,x_g=x)=x$ and
+$\ep B{\mathrm f}=\OR(0,0,0)=0$. At $s+4$ and $s+5$ the one-votes at $g$ are at most $\ep Bg$ and $C$,
+since $x_g=0$, so $g$ stays $0$; and $B$ becomes and stays $xx$ as in the move.
+\end{proof}
+
+Note that during a route the junction itself carries the bit $x$ at times $s+1,s+2,s+3$. Its arms
+are the only cells that read it.
+
+The following lemma composes routes along a path of junctions. Its only external hypothesis concerns
+the final destination; the intermediate far ports are handled inside the proof by the frame lemma.
+
+\begin{lemma}[Transport along a chain]\label{lem:chain}
+Let $g_1,\dots,g_n$ be junctions and $X_0,\dots,X_n$ cells such that, for $1\le\ell\le n$, the cells
+$X_{\ell-1}$ and $X_\ell$ are arms of $g_\ell$, with third arm $Y_\ell$. For $\ell<n$, the endpoint
+of $X_\ell$ away from $g_\ell$ is adjacent to $g_{\ell+1}$. Assume at time $s$:
+\[
+X_0=xx,\quad X_1=\dots=X_n=cc,\quad Y_1=\dots=Y_n=bb,\quad x_{g_1}=\dots=x_{g_n}=c,
+\]
+and that the data port of the endpoint of $X_n$ away from $g_n$ is $c$ during
+$[s+6n-3,s+6n)$. Apply $\prim{ROUTE}(g_\ell;X_{\ell-1}\to X_\ell;Y_\ell)$ during
+$[s+6(\ell-1),s+6\ell)$ for $\ell=1,\dots,n$, with $h_{g_\ell}=c$ outside its own route. Then at
+time $s+6n$ we have $X_n=xx$, $X_0=\dots=X_{n-1}=cc$, all $g_\ell=c$, and the $Y_\ell$ unchanged.
+\end{lemma}
+
+\begin{proof}
+By induction on $\ell$ we prove the invariant $J_\ell$: at time $s+6\ell$, $X_\ell=xx$, all other
+$X$'s are $cc$, all junctions are $c$, and the $Y$'s are unchanged. $J_0$ is the hypothesis. Assume
+$J_{\ell-1}$, and consider control times $[s+6(\ell-1),s+6\ell)$. We verify the hypotheses of
+\cref{lem:route} at $g_\ell$; its source $X_{\ell-1}$ may have any far port. Its destination
+$X_\ell$ has far port $g_{\ell+1}$ when $\ell<n$. The arms of $g_{\ell+1}$ are $X_\ell$,
+$X_{\ell+1}=cc$ and $Y_{\ell+1}=bb$, and its control is $c$. So at most two of its arm endpoints
+are $b$, and the frame lemma keeps $g_{\ell+1}=c$ throughout. When $\ell=n$ the far port is $c$ by
+hypothesis. Every other junction $g_{\ell'}$ keeps state $c$ by the frame lemma: for
+$\ell'\ge\ell+2$ its arms are unchanged, $c$ and $b$; for $\ell'=\ell-1$ its arms are $X_{\ell-2}=cc$,
+$Y_{\ell-1}=bb$ and $X_{\ell-1}$, which is $x$ or $c$. Every other cell is a uniform cell in \HOLD.
+\Cref{lem:route} gives $J_\ell$.
+\end{proof}
+
+The lemma does not control the neighbour of $X_0$ away from $g_1$. That vertex sees $X_0$ change from
+$x$ to $c$, and every application checks it separately.
+
+\subsection{Logic}
+
+\begin{lemma}[\prim{GATE}]\label{lem:gate}
+Let $g$ be a junction with arms $A$, $B$ (operands) and $C$ (output). Assume at time $s$:
+\[
+x_g=c,\qquad A=xx,\qquad B=yy,\qquad C=cc,
+\]
+and that the data port of $\ep C{\mathrm f}$ equals $c$ during $[s,s+5)$. The operands' far ports are
+arbitrary. Apply:
+\begin{center}\small
+\begin{tabular}{llll}\toprule
+control times & $C$ & $A,B$ & $h_g$\\\midrule
+$s$ & $\FAV b$ (pre-enable) & \HOLD & $c$\\
+$[s+1,s+4)$ & $\FAV b$ & $\FAV c$ (core) & $b$\\
+$s+4$ & $\FAV b$ & \HOLD & $c$\\\bottomrule
+\end{tabular}
+\end{center}
+Then at time $s+5$ we have $x_g=c$, $A=B=cc$ and $C=dd$, where $d=x\wedge y$ if $c=0$ and
+$d=x\vee y$ if $c=1$. This is $\prim{GATE}_c(g;A,B\to C)$, of duration $5$.
+\end{lemma}
+
+\begin{proof}
+For $c=0$, with $d=x\wedge y$ (the operand far endpoints are omitted; they reach $0$ by $s+3$):
+\begin{center}\small
+\begin{tabular}{cccccc}\toprule
+state time & $x_g$ & $\ep Ag$ & $\ep Bg$ & $\ep Cg$ & $\ep C{\mathrm f}$\\\midrule
+$s$   & $0$ & $x$ & $y$ & $0$ & $0$\\
+$s+1$ & $0$ & $x$ & $y$ & $0$ & $0$\\
+$s+2$ & $d$ & $0$ & $0$ & $0$ & $0$\\
+$s+3$ & $0$ & $0$ & $0$ & $d$ & $0$\\
+$s+4$ & $0$ & $0$ & $0$ & $d$ & $d$\\
+$s+5$ & $0$ & $0$ & $0$ & $d$ & $d$\\\bottomrule
+\end{tabular}
+\end{center}
+At $s$, $\MAJ_5(0,x,y,0,0)=0$, and $C$ in $\OR_3$ sees only zeros. At $s+1$, with $h_g=1$,
+$\MAJ_5(0,x,y,0,1)=x\wedge y$, while each operand's near endpoint computes $\AND(\cdot,\cdot,x_g=0)=0$
+and its far endpoint $\AND(\cdot,\cdot,P)$. At $s+2$, $\MAJ_5(d,0,0,0,1)=0$ because $d+1\le 2$; the
+operands are now entirely $0$; and $\ep Cg=\OR(0,0,x_g=d)=d$. At $s+3$, $\MAJ_5(0,0,0,d,1)=0$ and
+$\ep C{\mathrm f}=\OR(0,d,0)=d$. At $s+4$, $h_g=0$ and $\MAJ_5(0,0,0,d,0)=0$, while $C$ keeps $dd$
+under $\OR$.
+\end{proof}
+
+For $c=1$ the dual gate computes $x\vee y$ on background one. Duality proves a dual
+\emph{operation}. It adds no negation of an arbitrary input and does not change the majority rule.
+
+\subsection{Reading with restoration of the isolating cells}
+
+Reading a register must preserve its content and restore the cells that isolate it from the bus. A
+naive read that leaves a zero-valued source connected to a zero-valued copy along an entirely zero
+path cannot be undone later. The following operation restores the buffer before sending, and
+restores the front cell during sending.
+
+\begin{lemma}[\prim{READ}]\label{lem:read}
+Let $g$ be a junction with arms $A$, $B$, $C$, and let the side branch continue $C\,$--$\,K\,$--$\,R$,
+that is, $\ep CK$ is adjacent to $\ep KC$ and $\ep KR$ to $\ep RK$:
+\[
+A\;-\;g\;-\;B,\qquad g\;-\;C\;-\;K\;-\;R .
+\]
+Assume at time $s$:
+\[
+A=C=K=bb\ (\text{the pilot and the isolators}),\qquad B=cc,\qquad R=xx,
+\]
+with $x_g$ arbitrary. Assume the data port of $\ep A{\mathrm f}$ equals $c$ during $[s,s+14)$. The
+data ports of $\ep B{\mathrm f}$ and $\ep R{\mathrm f}$ are arbitrary. $R$ is in \HOLD\ throughout.
+Apply, with unmentioned cells in \HOLD:
+\begin{center}\small
+\begin{tabular}{lll}\toprule
+control times & $h_g$ & modes\\\midrule
+$s$ & $b$ & ---\\
+$[s+1,s+4)$ & $b$ & $K$ in $\FAV c$\\
+$[s+4,s+7)$ & $b$ & $K$ in $\FAV b$, $C$ in $\FAV c$\\
+$s+7$ & $b$ & ---\\
+$[s+8,s+11)$ & $b$ & $A$ in $\FAV c$\\
+$[s+11,s+14)$ & $c$ & $A$ and $C$ in $\FAV b$\\\bottomrule
+\end{tabular}
+\end{center}
+Then at time $s+14$ we have
+\[
+x_g=c,\qquad A=xx,\qquad B=cc,\qquad C=K=bb,\qquad R=xx.
+\]
+The bit $x$ is delivered to $A$, the source $R$ is preserved, and both isolators $C$ and $K$ are
+restored; the pilot $A=bb$ is consumed. This is $\prim{READ}(g;A;C,K,R)$, of duration $14$.
+\end{lemma}
+
+\begin{proof}
+For $c=0$ (so the pilot and isolators are $11$). Columns list $x_g$ and the endpoints; $B=00$ is
+constant by the frame lemma, and so is $R=xx$.
+\begin{center}\small
+\begin{tabular}{cccccccc}\toprule
+state time & $x_g$ & $\ep A{\mathrm f}$ & $\ep Ag$ & $\ep Cg$ & $\ep CK$ & $\ep KC$ & $\ep KR$\\\midrule
+$s$    & any & $1$ & $1$ & $1$ & $1$ & $1$ & $1$\\
+$s+1$  & $1$ & $1$ & $1$ & $1$ & $1$ & $1$ & $1$\\
+$s+2$  & $1$ & $1$ & $1$ & $1$ & $1$ & $1$ & $x$\\
+$s+3$  & $1$ & $1$ & $1$ & $1$ & $1$ & $x$ & $x$\\
+$s+4$  & $1$ & $1$ & $1$ & $1$ & $1$ & $x$ & $x$\\
+$s+5$  & $1$ & $1$ & $1$ & $1$ & $x$ & $1$ & $x$\\
+$s+6$  & $1$ & $1$ & $1$ & $x$ & $x$ & $1$ & $1$\\
+$s+7$  & $1$ & $1$ & $1$ & $x$ & $x$ & $1$ & $1$\\
+$s+8$  & $1$ & $1$ & $1$ & $x$ & $x$ & $1$ & $1$\\
+$s+9$  & $1$ & $0$ & $1$ & $x$ & $x$ & $1$ & $1$\\
+$s+10$ & $1$ & $0$ & $0$ & $x$ & $x$ & $1$ & $1$\\
+$s+11$ & $x$ & $0$ & $0$ & $x$ & $x$ & $1$ & $1$\\
+$s+12$ & $0$ & $0$ & $x$ & $x$ & $1$ & $1$ & $1$\\
+$s+13$ & $0$ & $x$ & $x$ & $1$ & $1$ & $1$ & $1$\\
+$s+14$ & $0$ & $x$ & $x$ & $1$ & $1$ & $1$ & $1$\\\bottomrule
+\end{tabular}
+\end{center}
+We justify each transition.
+\begin{itemize}
+\item \emph{Control time $s$.} With $\ep Ag=\ep Cg=h_g=1$, the junction becomes $1$ whatever its
+  previous state.
+\item \emph{Extraction, $[s+1,s+4)$, $K$ in $\RESET$.} The ports of $K$ are $\ep CK=1$ and
+  $\ep RK=x$. At $s+1$, $\ep KR=\AND(1,1,x)=x$ and $\ep KC=\AND(1,1,1)=1$. At $s+2$,
+  $\ep KC=\AND(1,x,1)=x$. At $s+3$, $K=xx$ is preserved. The junction stays $1$: its self, $\ep Ag$ and
+  $h_g$ are three one-votes.
+\item \emph{Transfer, $[s+4,s+7)$.} This is $\prim{MOVE}_1(K\to C)$ of \cref{lem:move}: source $K=xx$
+  in \LOAD, destination $C=11$ in \RESET, and far destination port $x_g$, which stays $1$ because
+  its self, $\ep Ag$ and $h_g$ are $1$. The source's far port is $\ep RK=x$. The result is $K=11$,
+  $C=xx$, as listed.
+\item \emph{Control time $s+7$.} All cells are in \HOLD\ and uniform; $x_g$ stays $1$.
+\item \emph{Receive, $[s+8,s+11)$, $A$ in \RESET\ with far port $0$.} At $s+8$,
+  $\ep A{\mathrm f}=\AND(1,1,0)=0$ and $\ep Ag=\AND(1,1,x_g=1)=1$. At $s+9$, $\ep Ag=\AND(1,0,1)=0$.
+  Meanwhile $x_g$ stays $1$, because self and $h_g$ are $1$ and $\ep Ag(s+9)=1$. At $s+10$,
+  $x_g(s+11)=\MAJ_5(1,0,0,x,1)=x$, since $\ep Ag=\ep Bg=0$ and $\ep Cg=x$.
+\item \emph{Send and restore, $[s+11,s+14)$, $h_g=0$, $A$ and $C$ in \LOAD.} At $s+11$,
+  $x_g=\MAJ_5(x,0,0,x,0)=0$; $\ep Ag=\OR(0,0,x_g=x)=x$; $\ep A{\mathrm f}=\OR(0,0,0)=0$;
+  $\ep Cg=\OR(x,x,x)=x$; and $\ep CK=\OR(x,x,\ep KC=1)=1$. At $s+12$, the one-votes at $g$ are at
+  most $\ep Ag$ and $\ep Cg$, so $x_g=0$; $\ep A{\mathrm f}=\OR(0,x,0)=x$; $\ep Ag=\OR(x,0,0)=x$; and
+  $\ep Cg=\OR(x,1,0)=1$. At $s+13$, $\MAJ_5(0,x,0,1,0)=0$, and $A=xx$ and $C=11$ are preserved under
+  $\OR$ with port values $0$.
+\end{itemize}
+$B=00$ is in \HOLD\ and uniform, so the bits $1$ or $x$ at $g$ do not affect it. $R$ is in \HOLD\ and
+uniform, so $K$ does not affect it.
+\end{proof}
+
+\begin{remark}\label{rem:readwait}
+The pilot, the isolators and the source are uniform cells in \HOLD, and the junction may start in
+either state. So the read can be preceded by any number of all-\HOLD\ steps with $h_g=c$ and no
+transient value of $g$ is needed. In the processor the read always starts with $x_g=c$.
+\end{remark}

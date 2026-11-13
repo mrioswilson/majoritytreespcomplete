@@ -1,0 +1,156 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,array,longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=green!35!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[capitalise,nameinlink]{cleveref}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\allowdisplaybreaks
+
+% ---------------------------------------------------------------- theorems
+\usepackage{thmtools}
+\declaretheorem[style=plain,numberwithin=section,name=Theorem]{theorem}
+\declaretheorem[style=plain,sibling=theorem,name=Proposition]{proposition}
+\declaretheorem[style=plain,sibling=theorem,name=Lemma]{lemma}
+\declaretheorem[style=plain,sibling=theorem,name=Corollary]{corollary}
+\declaretheorem[style=plain,name=Theorem,refname={Theorem,Theorems},Refname={Theorem,Theorems}]{mainthm}
+\renewcommand{\themainthm}{\Alph{mainthm}}
+\declaretheorem[style=definition,sibling=theorem,name=Definition]{definition}
+\declaretheorem[style=definition,sibling=theorem,name=Construction]{construction}
+\declaretheorem[style=remark,sibling=theorem,name=Remark]{remark}
+\crefname{table}{Table}{Tables}
+
+% ---------------------------------------------------------------- macros
+\newcommand{\HOLD}{\textsf{HOLD}}
+\newcommand{\RESET}{\textsf{RESET}}
+\newcommand{\LOAD}{\textsf{LOAD}}
+\newcommand{\FAV}[1]{\textsf{FAVOR}(#1)}
+\newcommand{\NORMAL}{\textsf{NORMAL}}
+\newcommand{\MAJ}{\operatorname{MAJ}}
+\newcommand{\AND}{\operatorname{AND}}
+\newcommand{\OR}{\operatorname{OR}}
+\newcommand{\Pred}{\textsc{Pred}_4\textsc{-Tree}}
+\newcommand{\Ever}{\textsc{Ever}_4\textsc{-Tree}}
+\newcommand{\EVAL}{\textsc{Mslp-Eval}}
+\newcommand{\OMCVP}{\textsc{Omcvp}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\kend}{\kappa_{\mathrm{end}}}
+\newcommand{\val}{\operatorname{val}}
+\newcommand{\dist}{\operatorname{dist}}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\ep}[2]{#1^{#2}}          % endpoint of cell #1 adjacent to #2
+\newcommand{\Lsp}{\mathsf{L}}
+\newcommand{\Ptime}{\mathsf{P}}
+\newcommand{\NC}{\mathsf{NC}}
+\newcommand{\prim}[1]{\textsf{#1}}
+\newcommand{\Hz}{H}
+\newcommand{\Word}{w}
+\newcommand{\ie}{i.e.}
+
+\title{P-Completeness of Synchronous Majority on Trees of Maximum Degree Four:\\
+a Modular Proof via Monotone Boolean Straight-Line Programs}
+\author{}
+\date{Consolidated version, 13 November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We consider synchronous majority dynamics on an explicitly given finite tree: every vertex
+simultaneously adopts the strict majority of its neighbours' bits and keeps its own bit on a tie.
+We prove that predicting the state of a designated vertex at a binary-encoded time is
+$\Ptime$-complete under logspace many-one reductions, already on trees of maximum degree four whose
+vertex degrees all lie in $\{1,3,4\}$. Deciding whether a designated, initially zero vertex ever
+becomes one is $\Ptime$-complete as well.
+
+The proof is organised around a single \emph{simulation theorem}: a logspace transducer turns every
+monotone Boolean straight-line program into a tree of maximum degree four, an initial configuration,
+a designated vertex and an observation time, such that the majority evolution reproduces the value
+of the program's designated register. The physical tree is a serial processor whose memory cells,
+transport junctions, logic gates and non-destructive reader are all driven by private autonomous
+control trees; no state is forced from outside during the evolution. The simulation is assembled
+from local contracts, a phase calculus that certifies every control word, and explicit invariants
+composed by induction over the program. For a program with $m$ registers the observation time is
+$O(m^2)$ and the tree has $O(m^{13})$ vertices.
+
+This is a consolidated, reorganised presentation of an existing proof. All substantive mathematical
+content of the original manuscript is retained; \cref{app:map} maps each result to its source.
+\end{abstract}
+
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+\input{sections/01-intro}
+\input{sections/02-prelim}
+\input{sections/03-model}
+\input{sections/04-pcomplete}
+\input{sections/05-simulation}
+\input{sections/06-modules}
+\input{sections/07-clocks}
+\input{sections/08-processor}
+\input{sections/09-analysis}
+\input{sections/10-completeness}
+
+\appendix
+\input{sections/A-appendix}
+
+\begin{thebibliography}{99}\small
+
+\bibitem[GFP85]{GFP85}
+E.~Goles-Chacc, F.~Fogelman-Souli\'e, and D.~Pellegrin.
+\newblock Decreasing energy functions as a tool for studying threshold networks.
+\newblock \emph{Discrete Applied Mathematics}, 12(3):261--277, 1985.
+
+\bibitem[GO80]{GO80}
+E.~Goles and J.~Olivos.
+\newblock Periodic behaviour of generalized threshold functions.
+\newblock \emph{Discrete Mathematics}, 30(2):187--189, 1980.
+
+\bibitem[GHR95]{GHR95}
+R.~Greenlaw, H.~J. Hoover, and W.~L. Ruzzo.
+\newblock \emph{Limits to Parallel Computation: {P}-Completeness Theory}.
+\newblock Oxford University Press, 1995.
+
+\bibitem[Gol77]{Gol77}
+L.~M. Goldschlager.
+\newblock The monotone and planar circuit value problems are log space complete for {P}.
+\newblock \emph{SIGACT News}, 9(2):25--29, 1977.
+
+\bibitem[Jon75]{Jon75}
+N.~D. Jones.
+\newblock Space-bounded reducibility among combinatorial problems.
+\newblock \emph{Journal of Computer and System Sciences}, 11(1):68--85, 1975.
+
+\bibitem[Lad75]{Lad75}
+R.~E. Ladner.
+\newblock The circuit value problem is log space complete for {P}.
+\newblock \emph{SIGACT News}, 7(1):18--20, 1975.
+
+\bibitem[LL76]{LL76}
+R.~E. Ladner and N.~A. Lynch.
+\newblock Relativization of questions about log space computability.
+\newblock \emph{Mathematical Systems Theory}, 10:19--32, 1976.
+
+\bibitem[PS83]{PS83}
+S.~Poljak and M.~S\r{u}ra.
+\newblock On periodical behaviour in societies with symmetric influences.
+\newblock \emph{Combinatorica}, 3(1):119--121, 1983.
+
+\bibitem[Src]{Src}
+Source notes of the original manuscript.
+\newblock \emph{P-Completeness of Synchronous Majority on Trees of Maximum Degree Four}, English
+edition of 13 November 2026, compiled from research notes dated 8 October 2026. Its ordered circuit
+convention refers to Section~3.1 and Proposition~3.3 of arXiv:2610.04311v1.
+
+\end{thebibliography}
+
+\end{document}

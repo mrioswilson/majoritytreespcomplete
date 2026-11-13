@@ -1,0 +1,95 @@
+% ====================================================================
+\section{The computational model: monotone Boolean straight-line programs}\label{sec:model}
+% ====================================================================
+
+\begin{definition}[Monotone Boolean straight-line program]\label{def:mslp}
+A \emph{monotone Boolean straight-line program} (MSLP) is a tuple
+$\mathcal P=(r,\iota_0,(\pi_1,\dots,\pi_L),o)$ where:
+\begin{itemize}
+\item $r\ge 1$ is the number of \emph{registers} $R_1,\dots,R_r$, each holding one bit;
+\item $\iota_0\in\{0,1\}^r$ is the \emph{initial content} of the registers;
+\item each \emph{instruction} $\pi_\ell$ has the form
+  $R_{d_\ell}\leftarrow R_{a_\ell}\circ_\ell R_{b_\ell}$, with $d_\ell,a_\ell,b_\ell\in[1,r]$ and
+  $\circ_\ell\in\{\wedge,\vee\}$;
+\item $o\in[1,r]$ is the \emph{designated register}.
+\end{itemize}
+The program is encoded by listing $r$, $\iota_0$, and the quadruples $(d_\ell,\circ_\ell,a_\ell,b_\ell)$
+with indices in binary.
+\end{definition}
+
+\begin{definition}[Semantics]\label{def:semantics}
+The \emph{register states} $\rho_0,\dots,\rho_L:[1,r]\to\{0,1\}$ are $\rho_0=\iota_0$ and
+\[
+\rho_\ell(x)=\begin{cases}\rho_{\ell-1}(a_\ell)\circ_\ell\rho_{\ell-1}(b_\ell)&\text{if }x=d_\ell,\\
+\rho_{\ell-1}(x)&\text{otherwise.}\end{cases}
+\]
+The \emph{value} of $\mathcal P$ is $\val(\mathcal P)=\rho_L(o)$.
+\end{definition}
+
+The model has the four features required by the reduction:
+\begin{itemize}
+\item \emph{Boolean registers.} The only data are bits.
+\item \emph{Monotone instructions.} Only $\wedge$ and $\vee$ occur. Constants enter only through
+  $\iota_0$, and there is no negation.
+\item \emph{Reuse of values.} A register may be read by any number of later instructions, and may
+  also be overwritten.
+\item \emph{No conditional jumps.} The instructions are executed once each, in their listed order.
+  Which registers are read and written at step $\ell$ is fixed by the program text, independently of
+  the data.
+\end{itemize}
+We call the last property \emph{obliviousness}. It is what allows a fixed physical schedule to
+execute the program, as in \cref{sec:processor}.
+
+\begin{definition}[Single-assignment normal form]\label{def:normalform}
+An MSLP in \emph{normal form} has registers $R_1,\dots,R_m$ with $m\ge 2$. There is a set
+$I\subseteq[1,m-1]$ of \emph{input registers}, and instructions indexed by the
+\emph{instruction registers} $k\in[1,m]\setminus I$, executed in increasing order of $k$. Each
+instruction is $R_k\leftarrow R_{i_k}\circ_k R_{j_k}$ with $i_k,j_k<k$; the case $i_k=j_k$ is
+allowed. Thus every register is written at most once, and only after all the registers it reads.
+The designated register is $R_m$, and the last instruction is $R_m\leftarrow R_o\wedge R_o$ for
+some $o<m$. Input registers have initial values $\iota_0(i)$. Instruction registers have initial
+value $0$, which is never read. Register $R_1$ is necessarily an input, because an instruction $k$
+needs operands smaller than $k$. In particular every instruction register satisfies $k\ge 2$.
+\end{definition}
+
+A program in normal form is the same thing as a topologically ordered monotone circuit: constants
+are the input registers, gates are the instruction registers, and the predecessors of gate $k$ are
+$i_k,j_k<k$. Arbitrary fan-out corresponds to repeated reads.
+
+\begin{lemma}[Normal form in logspace]\label{lem:normalform}
+There is a logspace transducer that maps every MSLP $\mathcal P$ to an MSLP $\mathcal P'$ in normal
+form with $\val(\mathcal P')=\val(\mathcal P)$ and $m=r+L+1$ registers.
+\end{lemma}
+
+\begin{proof}
+Let $\mathcal P=(r,\iota_0,(\pi_\ell)_{\ell\le L},o)$. For $x\in[1,r]$ and $1\le\ell\le L+1$ define
+\[
+\lambda(x,\ell)=\begin{cases}r+\max\{\ell'<\ell:\ d_{\ell'}=x\}&\text{if this set is nonempty},\\
+x&\text{otherwise}.\end{cases}
+\]
+Thus $\lambda(x,\ell)$ names the register of $\mathcal P'$ that holds the content of $R_x$ just
+before instruction $\ell$ of $\mathcal P$. Let $\mathcal P'$ have registers $1,\dots,r+L+1$, inputs
+$I=[1,r]$ with the values $\iota_0$, and for $1\le\ell\le L$ the instruction
+\[
+R'_{r+\ell}\leftarrow R'_{\lambda(a_\ell,\ell)}\circ_\ell R'_{\lambda(b_\ell,\ell)},
+\]
+followed by $R'_{r+L+1}\leftarrow R'_{\lambda(o,L+1)}\wedge R'_{\lambda(o,L+1)}$. All operand indices
+are smaller than the index written, so $\mathcal P'$ is in normal form.
+
+By induction on $\ell$, the value of $R'_{r+\ell}$ equals $\rho_\ell(d_\ell)$, and
+$\rho_{\ell}(x)$ equals the value of $R'_{\lambda(x,\ell+1)}$ for every $x$. The base case is
+$\lambda(x,1)=x$. For the inductive step, if $x\ne d_\ell$ then
+$\lambda(x,\ell+1)=\lambda(x,\ell)$, and if $x=d_\ell$ then $\lambda(x,\ell+1)=r+\ell$. Hence
+$\val(\mathcal P')=\rho_L(o)\wedge\rho_L(o)=\val(\mathcal P)$.
+
+For logspace, each output symbol is computed by a loop over $\ell'$ from $\ell-1$ down to $1$
+that compares $d_{\ell'}$ with $x$ by rereading the input. Only a constant number of indices of
+$O(\log(r+L))$ bits are stored.
+\end{proof}
+
+\begin{remark}\label{rem:finaland}
+The final instruction $R_m\leftarrow R_o\wedge R_o$ copies the designated value. It makes the last
+instruction an $\AND$, which the eventual-activation construction of \cref{sec:ever} uses.
+For a topologically ordered circuit with designated output $o$, appending this gate is the
+convention of the original manuscript.
+\end{remark}

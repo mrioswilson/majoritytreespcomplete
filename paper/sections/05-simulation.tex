@@ -1,0 +1,120 @@
+% ====================================================================
+\section{The simulation theorem}\label{sec:simulation}
+% ====================================================================
+
+\subsection{Statement}
+
+\begin{theorem}[Simulation theorem]\label{thm:simulation}
+There is a logspace transducer which, given an MSLP $\mathcal P$ in normal form with $m$
+registers, outputs an explicit tree $T$, an initial configuration $x(0)\in\{0,1\}^{V(T)}$, a vertex
+$v^\ast$ and a nonnegative integer $\tau$ in binary, such that:
+\begin{enumerate}[label=(\roman*)]
+\item\label{sim:tree} $T$ is a tree, and every vertex of $T$ has degree $1$, $3$ or $4$;
+\item\label{sim:size} $|V(T)|=O(m^{13})$;
+\item\label{sim:time} $\tau\le 34m^2+79m$, and $\tau$ is given by the explicit formula of
+  \cref{cor:tau};
+\item\label{sim:correct} under synchronous majority, $x_{v^\ast}(\tau)=\val(\mathcal P)$.
+\end{enumerate}
+A second logspace transducer outputs $(T',x'(0),z)$ satisfying \ref{sim:tree} and \ref{sim:size}, with
+$x'_z(0)=0$ and
+\[
+\exists\, t\ge 1:\ x'_z(t)=1\quad\Longleftrightarrow\quad\val(\mathcal P)=1.
+\]
+By \cref{lem:normalform} and closure of logspace reductions under composition~\cite{Jon75,LL76},
+the same holds for every MSLP, with $m$ replaced by $r+L+1$.
+\end{theorem}
+
+The rest of this section explains how the proof is organised and proves the principle that joins
+its two layers.
+
+\subsection{Two layers: a controlled processor and autonomous clocks}
+
+The tree $T$ consists of a \emph{processor} $P$ of $O(m)$ vertices, together with $O(m)$ private
+\emph{generator} trees attached to it by single edges.
+\begin{itemize}
+\item The processor (\cref{sec:modules,sec:processor}) is analysed as a \emph{controlled tree}. Some
+  of its vertices, the \emph{control slots}, are leaves whose bits are prescribed words. The
+  remaining vertices follow the majority rule. All local operations and the complete program are
+  proved correct in this forced setting.
+\item Each control slot is then replaced by a \emph{robust generator} (\cref{sec:clocks}): a private
+  tree whose root reproduces the prescribed word whatever the processor does. The substitution
+  principle below shows that this replacement does not change the evolution of the processor.
+\end{itemize}
+
+\begin{definition}[Controlled tree]\label{def:controlled}
+A \emph{controlled tree} is a finite tree $P$ together with a set $S\subseteq V(P)$ of leaves,
+called \emph{control slots}, a horizon $\Hz\in\mathbb N$, and for every $\sigma\in S$ a word
+$w_\sigma:[0,\Hz]\to\{0,1\}$. The unique neighbour of a slot $\sigma$ is its \emph{consumer}. Given
+initial bits on $V(P)\setminus S$, the \emph{forced evolution} is the open evolution of
+$V(P)\setminus S$ (\cref{def:open}) with boundary $S$ and boundary history $y_\sigma(t)=w_\sigma(t)$
+for $t\le\Hz$, extended arbitrarily for $t>\Hz$.
+\end{definition}
+
+\begin{definition}[Robust generator]\label{def:robust}
+Let $\Gamma$ be a finite rooted tree with root $\gamma$ and initial bits $x(0)$, and let
+$h:\mathbb N\to\{0,1\}$. Attach to $\gamma$ one new external vertex $\epsilon$, the
+\emph{consumer}. We say that $\Gamma$ is a \emph{robust generator of $h$} if, for \emph{every}
+history $y:\mathbb N\to\{0,1\}$ of $\epsilon$, the open evolution of $V(\Gamma)$ with boundary
+history $y$ satisfies $x_\gamma(t)=h(t)$ for all $t\ge 0$. Degrees in $\Gamma$ are counted including
+the edge $\gamma\epsilon$. The consumer is not counted in $|\Gamma|$.
+\end{definition}
+
+Robustness quantifies over all histories $y$. These include histories that depend on the earlier
+states of $\Gamma$ itself, since every such feedback history is in particular one fixed function
+$y:\mathbb N\to\{0,1\}$.
+
+\begin{proposition}[Substitution principle]\label{prop:substitution}
+Let $(P,S,\Hz,(w_\sigma))$ be a controlled tree. For every $\sigma\in S$ let $\Gamma_\sigma$ be a
+robust generator of some $h_\sigma$ with $h_\sigma(t)=w_\sigma(t)$ for $0\le t\le\Hz$. Assume that the
+$\Gamma_\sigma$ are pairwise disjoint and disjoint from $V(P)\setminus S$. Let $T$ be obtained from
+$P$ by identifying each slot $\sigma$ with the root of $\Gamma_\sigma$, so that the consumer of the
+slot becomes the consumer of $\Gamma_\sigma$. Then:
+\begin{enumerate}[label=(\alph*)]
+\item\label{sub:tree} $T$ is a tree. The degree of a vertex of $V(P)\setminus S$ is the same in
+  $T$ as in $P$, and every vertex of $\Gamma_\sigma$ has in $T$ the degree it has in $\Gamma_\sigma$,
+  consumer edge included.
+\item\label{sub:same} For every common initial configuration of $V(P)\setminus S$ and of the
+  generators, the trajectory of $T$ agrees on $V(P)\setminus S$ with the forced evolution at all
+  times $0\le t\le\Hz+1$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+\ref{sub:tree} Each slot is a leaf of $P$, and each $\Gamma_\sigma$ is a tree joined to
+$V(P)\setminus S$ by exactly the one edge from its root to the consumer. Gluing disjoint trees along
+single edges produces a tree. Degrees are preserved by construction.
+
+\ref{sub:same} Let $x(\cdot)$ be the trajectory of $T$. The only vertex outside $\Gamma_\sigma$ that
+is adjacent to $\Gamma_\sigma$ is the consumer $\epsilon_\sigma$. By \cref{lem:locality}, the
+restriction of $x$ to $\Gamma_\sigma$ is the open evolution of $\Gamma_\sigma$ under the boundary
+history $y(t)=x_{\epsilon_\sigma}(t)$. This $y$ is one particular function
+$\mathbb N\to\{0,1\}$, so robustness gives $x_{\gamma_\sigma}(t)=h_\sigma(t)=w_\sigma(t)$ for
+$t\le\Hz$. The boundary of $V(P)\setminus S$ in $T$ consists exactly of the roots
+$\gamma_\sigma$. Their histories therefore agree with the prescribed words on $[0,\Hz]$, and
+\cref{lem:locality} shows that $x$ agrees with the forced evolution on $V(P)\setminus S$ up to time
+$\Hz+1$.
+\end{proof}
+
+\begin{remark}\label{rem:afterH}
+After time $\Hz$ the generators follow their own histories $h_\sigma$, which need not be constant. In
+our construction they alternate. The prediction query is made at time $\tau\le\Hz$, so this tail is
+irrelevant there. For eventual activation the tail \emph{is} relevant, which is why
+\cref{sec:ever} adds a reader whose verdict is immune to it.
+\end{remark}
+
+\subsection{Plan of the proof of \texorpdfstring{\cref{thm:simulation}}{the simulation theorem}}
+
+\begin{enumerate}[label=(\arabic*)]
+\item \Cref{sec:modules}: memory cells, junctions and the local primitives \prim{SET}, \prim{COPY},
+  \prim{MOVE}, \prim{ROUTE}, \prim{GATE} and \prim{READ}, each with a contract in the forced setting.
+\item \Cref{sec:clocks}: which words a single fixed-phase generator can produce (phase words); the
+  phase calculus that checks every control word of every primitive; and the robust generators
+  themselves.
+\item \Cref{sec:processor}: the processor, its normal configurations, one program instruction as a
+  composition of primitives through explicit milestones, background normalisation, and the
+  forced-control simulation theorem (\cref{thm:forced}).
+\item \Cref{sec:analysis}: substitution of generators, size, time, degree, acyclicity and logspace
+  constructibility. This completes the proof of \cref{thm:simulation}, except for the
+  eventual-activation variant.
+\item \Cref{sec:completeness}: membership in $\Ptime$, and the eventual-activation variant.
+\end{enumerate}

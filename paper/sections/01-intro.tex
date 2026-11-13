@@ -1,0 +1,186 @@
+% ====================================================================
+\section{Introduction}\label{sec:intro}
+% ====================================================================
+
+\subsection{The problem and the results}
+
+Let $T=(V,E)$ be a finite simple undirected tree in which every vertex carries a bit. In
+\emph{synchronous majority dynamics} all vertices update at the same time: a vertex takes the strict
+majority of the bits of its neighbours, and keeps its own bit when the neighbours are tied. There are
+no weights, no directed edges and no physical self-loops. We study two decision problems for this
+dynamics on trees of maximum degree four (formal definitions are in \cref{sec:prelim}):
+\begin{itemize}
+\item $\Pred$: given the tree, an initial configuration, a vertex $v^\ast$ and a time $\tau$ written
+  in binary, is $v^\ast$ in state $1$ at time $\tau$?
+\item $\Ever$: given the tree, an initial configuration and a vertex $z$ initially in state $0$, is
+  $z$ in state $1$ at some time?
+\end{itemize}
+
+The heart of the paper is the following simulation theorem, stated precisely as
+\cref{thm:simulation}. Monotone Boolean straight-line programs are defined in \cref{sec:model}.
+
+\begin{mainthm}[Simulation theorem]\label{thmA}
+There is a logspace transducer that maps every monotone Boolean straight-line program $\mathcal P$
+to a tree $T$ of maximum degree four, an initial configuration, a vertex $v^\ast$ and a time $\tau$
+written in binary, such that the state of $v^\ast$ at time $\tau$ under synchronous majority equals
+the final value of the designated register of $\mathcal P$. If $\mathcal P$ has $m$ registers in
+single-assignment normal form, then $\tau=O(m^2)$, $|V(T)|=O(m^{13})$, and all vertex degrees lie in
+$\{1,3,4\}$. A variant of the construction produces, instead of $(v^\ast,\tau)$, a vertex $z$
+initially in state $0$ which is ever in state $1$ if and only if the program outputs $1$.
+\end{mainthm}
+
+Combined with the classical $\Ptime$-completeness of monotone circuit value (\cref{sec:pcomplete})
+and with the classical bounded-transient behaviour of symmetric majority networks
+(\cref{sec:membership}), the simulation theorem gives the two completeness results.
+
+\begin{mainthm}\label{thmB}
+$\Pred$ is $\Ptime$-complete under logspace many-one reductions. Hardness already holds for trees
+whose vertex degrees all belong to $\{1,3,4\}$, with a query time polynomial in the instance size.
+\end{mainthm}
+
+\begin{mainthm}\label{thmC}
+$\Ever$ is $\Ptime$-complete under logspace many-one reductions, already on trees whose vertex
+degrees all belong to $\{1,3,4\}$.
+\end{mainthm}
+
+Since trees have treewidth one, hardness holds at treewidth one. The results say nothing about
+maximum degree three; see \cref{rem:scope}.
+
+\subsection{Architecture of the proof}\label{sec:architecture}
+
+The proof has six parts, each in its own section.
+\begin{enumerate}[label=(\arabic*)]
+\item \emph{Computational model} (\cref{sec:model}). Monotone Boolean straight-line programs:
+  Boolean registers, $\AND$/$\OR$ instructions, unrestricted reuse of stored values, and no
+  conditional jumps. A logspace normal form gives single assignment and topological order.
+\item \emph{$\Ptime$-completeness of program evaluation} (\cref{sec:pcomplete}). This is
+  essentially the classical result of Ladner and Goldschlager. We do not reprove it.
+\item \emph{Simulation theorem} (\cref{sec:simulation}). We state it and split its proof into
+  two layers. The first is a \emph{controlled processor}, whose control vertices follow prescribed
+  words. The second consists of \emph{autonomous clocks} that generate those words. A substitution
+  principle (\cref{prop:substitution}) glues the layers.
+\item \emph{Modular simulation lemmas}:
+  \begin{itemize}
+  \item storage, transport, logic and reading, as local contracts (\cref{sec:modules});
+  \item clocks and synchronisation, through a phase calculus and robust generators
+    (\cref{sec:clocks});
+  \item restoration and composition, through explicit invariants and induction over the program
+    (\cref{sec:processor}).
+  \end{itemize}
+\item \emph{Reduction analysis} (\cref{sec:analysis}): correctness, size, time, degree, acyclicity
+  and logspace constructibility.
+\item \emph{Completeness results} (\cref{sec:completeness}). Membership in $\Ptime$ is proved
+  separately, and eventual activation is treated as an additional result with its own
+  finite-window reader.
+\end{enumerate}
+
+\Cref{fig:dependencies} shows how the results depend on each other. An arrow $X\to Y$ means that the
+proof of $Y$ uses $X$.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw,rounded corners=2pt,align=center,font=\scriptsize,inner sep=2.5pt,
+              text width=2.75cm,minimum height=9mm},
+  cls/.style={box,fill=gray!14},
+  main/.style={box,fill=blue!6,text width=2.2cm,minimum height=6mm},
+  arr/.style={-{Stealth[length=1.8mm]},semithick,gray!65!black}]
+\def\xa{0}\def\xb{3.7}\def\xc{7.4}\def\xd{11.1}
+% row 1: local modules and clocks
+\node[box] (cell)  at (\xa,0) {cells, junctions,\\ duality, frame\\ \cref{lem:modes,lem:duality,lem:frame}};
+\node[box] (prims) at (\xb,0) {\prim{SET}, \prim{COPY}, \prim{MOVE},\\ \prim{ROUTE}, \prim{GATE}, \prim{READ}\\ \cref{sec:modules}};
+\node[box] (phase) at (\xc,0) {phase calculus\\ \cref{lem:cellphase,lem:concat,lem:timing}};
+\node[box] (gens)  at (\xd,0) {robust generators\\ \cref{thm:phasedefect,cor:words}};
+% row 2: composition
+\node[box] (proc)  at (\xb,-1.9) {milestones, instruction\\ step, normalisation\\ \cref{prop:instruction,lem:normalize}};
+\node[box] (forced) at (\xc,-1.9) {forced-control\\ simulation\\ \cref{thm:forced}};
+\node[box] (subst) at (\xd,-1.9) {substitution\\ principle\\ \cref{prop:substitution}};
+% row 3: the simulation theorem
+\node[box] (nf)    at (\xa,-3.8) {normal form\\ \cref{lem:normalform}};
+\node[box] (logsp) at (\xb,-3.8) {logspace transducer\\ \cref{prop:logspace}};
+\node[box,very thick] (sim) at (\xc,-3.8) {\textbf{simulation theorem}\\ \cref{thm:simulation}};
+\node[box] (reader) at (\xd,-3.8) {finite-window reader\\ \cref{lem:reader,lem:finalwrite}};
+% row 4: classical inputs and main results
+\node[cls] (mcvp)   at (\xa,-5.7) {ordered MCVP is\\ $\Ptime$-complete (classical)\\ \cref{thm:mcvp}};
+\node[main] (B)     at (\xb,-5.7) {\textbf{\cref{thmB}}\\ prediction};
+\node[cls] (energy) at (\xc,-5.7) {energy, period $\le2$\\ (classical)\\ \cref{prop:membership}};
+\node[main] (C)     at (\xd,-5.7) {\textbf{\cref{thmC}}\\ activation};
+% arrows
+\draw[arr] (cell) -- (prims);
+\draw[arr] (prims) -- (proc);
+\draw[arr] (cell.south) |- (proc.west);
+\draw[arr] (phase) -- (gens);
+\draw[arr] (phase) -- (forced);
+\draw[arr] (proc) -- (forced);
+\draw[arr] (gens) -- (subst);
+\draw[arr] (forced) -- (sim);
+\draw[arr] (subst) -- (sim);
+\draw[arr] (nf) -- (logsp);
+\draw[arr] (logsp) -- (sim);
+\draw[arr] (gens.east) -- ++(0.3,0) |- (reader.east);
+\draw[arr] (sim) -- (B);
+\draw[arr] (sim) -- (C);
+\draw[arr] (reader) -- (C);
+\draw[arr] (mcvp) -- (B);
+\draw[arr] (energy) -- (B);
+\draw[arr] (energy) -- (C);
+\end{tikzpicture}
+\caption{Dependencies between the main results. Shaded boxes are classical results that we cite.}
+\label{fig:dependencies}
+\end{figure}
+
+\subsection{Classical results and original contributions}\label{sec:credits}
+
+We cite the following results and do not reprove them, except where a short proof is needed in the
+exact form we use.
+\begin{itemize}
+\item $\Ptime$-completeness of the circuit value problem for circuits presented as straight-line
+  sequences \cite{Lad75}, and of its monotone restriction \cite{Gol77}; see also
+  \cite[Appendix~A.1]{GHR95}. This is \cref{thm:mcvp}.
+\item Closure of logspace reductions under composition \cite{Jon75,LL76}.
+\item Period at most two and a linear transient for symmetric threshold networks, proved with a
+  bounded energy function \cite{GO80,PS83,GFP85}. We include the short proof in
+  \cref{prop:membership}, because we need the explicit transient bound for binary-encoded times.
+\end{itemize}
+
+The following constructions and results come from the original manuscript~\cite{Src}. To our
+knowledge they are not in the classical literature:
+\begin{itemize}
+\item robust tree generators of all phase-defect words, with degree at most four and polynomial
+  size, constructible in logspace (\cref{sec:generators});
+\item the two-vertex \textsf{EDGE} memory cell with modes \RESET/\HOLD/\LOAD, and the local
+  operations \prim{MOVE}, \prim{ROUTE} and the five-transition gates (\cref{sec:modules});
+\item the fourteen-transition non-destructive reader that restores its isolating cells
+  (\cref{lem:read});
+\item the serial tree processor, its normal configurations, and the background normalisation wave
+  (\cref{sec:processor});
+\item the finite-window reader and the special final write used for eventual activation
+  (\cref{sec:ever}).
+\end{itemize}
+
+This version reorganises the proof and adds the following organisational lemmas, each proved here:
+\begin{itemize}
+\item a mode-level duality lemma (\cref{lem:duality});
+\item a frame lemma (\cref{lem:frame});
+\item a cell-phase lemma (\cref{lem:cellphase});
+\item a concatenation lemma that excludes the merging of control blocks (\cref{lem:concat});
+\item a table of timing signatures of all primitives (\cref{tab:timing});
+\item the substitution principle (\cref{prop:substitution});
+\item an explicit list of milestone configurations (\cref{tab:milestones});
+\item a closed formula for the observation time (\cref{prop:instruction,cor:tau}).
+\end{itemize}
+\Cref{app:map} records the correspondence with the original manuscript, and \cref{app:audit} lists
+the points that the reorganisation made explicit.
+
+\subsection{Conventions}\label{sec:conventions}
+
+We write $\oplus$ for exclusive or. For an integer $t$, its \emph{parity} is $t\bmod 2$. For a
+statement $S$, $\one\{S\}\in\{0,1\}$ is its indicator. For integers $a\le b$, $[a,b)$ is the set of
+integers $t$ with $a\le t<b$.
+
+A configuration at \emph{state time} $t$ is the vector of all bits at time $t$. A bit that a
+vertex reads at state time $t$ is called a \emph{control value at control time $t$}: it influences
+the transition from state time $t$ to state time $t+1$. In schedules, \emph{``during $[s,s+\ell)$''}
+refers to control times. An operation occupying the control times $[s,s+\ell)$ takes the
+configuration at state time $s$ to the configuration at state time $s+\ell$, and has
+\emph{duration} $\ell$.

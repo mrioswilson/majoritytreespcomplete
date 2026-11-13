@@ -1,0 +1,106 @@
+% ====================================================================
+\section{Correspondence with the original manuscript}\label{app:map}
+% ====================================================================
+
+The table maps every section of the original manuscript~\cite{Src} to its place in this version.
+Nothing of mathematical substance was removed. The appendix on source files and internal review status,
+which is not mathematical, is summarised at the end of this appendix.
+
+\begin{center}\small
+\begin{longtable}{p{4.6cm}p{4.6cm}p{5.2cm}}\toprule
+original & this version & change\\\midrule\endhead
+\S1 model, Def.~1.1, Thm.~1.2 & \cref{sec:prelim}, \cref{def:problems}, \cref{thmB,thmC} & split into model and results\\
+\S1 source problem (ordered MCVP) & \cref{sec:model,sec:pcomplete} & recast as MSLPs; classical references made explicit; normal-form lemma added\\
+\S2.1 robust generators, constant sources & \cref{def:robust}, \cref{sec:timers} & feedback made explicit in the definition\\
+Lemma 2.1 (timers) & \cref{lem:timers} & unchanged\\
+Lemma 2.2 (pulses) & \cref{lem:pulses} & unchanged\\
+Thm.~2.3 (phase defects) & \cref{thm:phasedefect} & unchanged\\
+\S2.4 combiner & \cref{lem:combiner} & three cases merged into two\\
+\S2.5 bases, size & proof of \cref{thm:phasedefect}, \cref{lem:paritytransform} & parity transformation isolated as a lemma\\
+\S2.6 logspace enumeration & \cref{lem:genlogspace} & unchanged\\
+\S2.7 realised words & \cref{lem:charwords}, \cref{cor:words} & unchanged\\
+\S3.1 \textsf{EDGE} cell, Lemma 3.1 & \cref{lem:modes,lem:forcing,lem:copy} & forcing hypothesis weakened (\cref{rem:forcing-hyp})\\
+\S3.2 move & \cref{lem:move}, \cref{rem:nopause} & unchanged\\
+\S3.3 junction, routing & \cref{lem:route}, \cref{lem:frame} & frame lemma factored out; chain transport \cref{lem:chain} added\\
+\S3.4 gates & \cref{lem:gate} & unchanged\\
+\S3.5 phase assignment & \cref{sec:phasecalc}, \cref{def:procphases} & cell-phase, concatenation and timing lemmas\\
+\S4 read (Lemma 4.1), \S4.2 & \cref{lem:read}, \cref{tab:timing} & unchanged; timing via the calculus\\
+\S5.1 processor, normal form & \cref{def:processor,def:normal,lem:proctopology,lem:normalstable} & stability made a lemma\\
+\S5.2 alignment waits & \cref{lem:sigmatiming,lem:waits} & waits enumerated; stability of each waiting configuration proved\\
+\S5.3 prepare, commit & \cref{lem:prepare,lem:commit} & unchanged\\
+\S5.4 fetch, store, recover & \cref{lem:fetch,lem:store,lem:recover} & fetch proved through \cref{lem:chain}\\
+\S5.5 gate, cleanup, routes & \cref{lem:gatestep,lem:clean,lem:writeroutes}, \cref{rem:fronts} & unchanged\\
+\S5.6 normalisation & \cref{lem:normalize} & wave invariant $W_j$ made explicit\\
+\S5.7 program invariant & \cref{prop:instruction,thm:forced}, \cref{tab:milestones} & milestones tabulated; closed formula for $\tau$ (\cref{cor:tau})\\
+\S6.1 control replacement & \cref{prop:substitution,prop:correct} & substitution principle stated and proved\\
+\S6.2 size and time & \cref{prop:size}, \cref{cor:tau} & horizon $\Hz=\tau+3$, or any larger polynomial\\
+\S6.3 logspace transducer & \cref{prop:logspace} & unchanged\\
+\S7 membership in $\Ptime$ & \cref{prop:membership} & attributed to the classical energy method\\
+\S8.1 reader (Lemma 8.1) & \cref{lem:reader} & unchanged\\
+\S8.2 final write & \cref{con:ever}, \cref{lem:finalwrite} & unchanged\\
+Scope paragraph & \cref{rem:scope} & unchanged\\\bottomrule
+\end{longtable}
+\end{center}
+
+\paragraph{Provenance.} The original English edition assembles research notes dated 8 October
+2026. Those notes record internal readings of the reduction and are attributed there to automated
+research agents. No human authorship, publication status, independent external review or
+proof-assistant verification is asserted there, and none is asserted here. The present version is a
+reorganisation; the computational checks of \cref{app:audit} are sanity checks, not part of the
+proof.
+
+% ====================================================================
+\section{Audit notes}\label{app:audit}
+% ====================================================================
+
+\paragraph{Points made explicit by the reorganisation.}
+\begin{enumerate}[label=(\arabic*)]
+\item \emph{Duality.} ``Complementing the contract'' is formalised at the level of modes
+  (\cref{lem:duality}). Literal complementation of control bits would replace $\HOLD=(0,1)$ by
+  $(1,0)$ (\cref{rem:dualcontrols}). Duality shifts the admissible start parity by one, which is the
+  background term $c$ in \eqref{eq:startparity}.
+\item \emph{Merging of control blocks.} The phase rule of the original requires each mode block to
+  start at the right parity and to have odd length. It does not address two adjacent blocks of the
+  same mode, which would merge into one block of even length and violate \eqref{eq:phase}.
+  \Cref{lem:concat} proves that this cannot happen when all blocks are admissible.
+\item \emph{Alignment waits.} The original permits ``a zero- or one-transition wait whenever the
+  preparation is stable''. Here the waits are determined exactly (\cref{lem:sigmatiming}): six per
+  instruction plus one after each normalisation. The stability of every waiting configuration is
+  proved (\cref{lem:waits}), and the observation time follows in closed form (\cref{cor:tau}).
+\item \emph{Feedback through consumers.} Robustness quantifies over all consumer histories, so it
+  covers feedback. The substitution principle (\cref{prop:substitution}) makes the induction
+  explicit.
+\item \emph{Frame conditions.} Every junction outside the footprint of a primitive is checked
+  through \cref{lem:frame} in the corresponding proof. For bus transports, the far ports of
+  intermediate destinations are handled once and for all inside \cref{lem:chain}.
+\item \emph{Space bounds.} The space of the reduction is kept separate from the complexity of
+  evaluation (\cref{rem:twospaces}).
+\end{enumerate}
+No error affecting the validity of the original argument was found: every schedule of the original
+is reproduced unchanged.
+
+\paragraph{Computational sanity checks.} Two scripts accompany this version, in
+\texttt{tools/check/}. They re-implement the constructions from the text.
+\begin{itemize}
+\item \texttt{processor\_sim.py} simulates the processor at vertex level, with every control slot
+  forced to its scheduled word. It checks:
+  \begin{itemize}
+  \item every milestone $\NORMAL(c_k,\rho_k)$ and the output;
+  \item condition \eqref{eq:phase} for every control word, with its assigned phase;
+  \item the absence of overlapping mode assignments;
+  \item the formula $D_k=12(i+j)+6m+92$;
+  \item the activation variant, including arbitrary perturbations of $R_m$ after the window.
+  \end{itemize}
+  It runs on all programs in normal form with at most three source nodes, plus the appended final
+  gate, and on random programs with up to ten registers. Deliberate mutations are detected: omitting
+  $\prim{SET}(F_A\mathbin{:=}c)$ in normalisation, a pause inside a move, removing the internal
+  wait of a fetch, a read that does not restore $C$, and restoring the fronts before $E_0=c$.
+\item \texttt{clock\_sim.py} builds the timers, the pulses and the phase-defect generators exactly as
+  described, and simulates them against adaptive and adversarial consumers. It checks the degrees,
+  that each output is a tree, the timer sizes, the counting recurrence \eqref{eq:counting} at every
+  skeleton node, \cref{lem:charwords}, and \cref{lem:reader}. The generators are checked for all defect
+  sets with dates at most $11$, in both phases, and for random larger ones.
+\end{itemize}
+These checks support the written proofs but do not replace them. The complete trees, of size
+$O(m^{13})$, are not simulated end to end. The link between the forced processor and the
+generators is \cref{prop:substitution}, which is proved, not tested.
